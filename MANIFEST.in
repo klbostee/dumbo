@@ -1,0 +1,1 @@
+recursive-include examples *.txt *.py
