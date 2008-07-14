@@ -1,4 +1,4 @@
-import sys,types,os
+import sys,types,os,random
 from itertools import groupby
 from operator import itemgetter
 
@@ -29,9 +29,12 @@ def loadtext(inputs):
     for input in inputs: yield (None,input)
 
 def run(mapper,reducer=None,combiner=None,
-        mapconf=None,redconf=None,code_in=False,code_out=False,iter=0):
+        mapconf=None,redconf=None,code_in=False,code_out=False,
+        iter=0,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
-        if (len(sys.argv) == 2 and iter == 0) or iter == int(sys.argv[2]):
+        iterarg = 0 # default value
+        if len(sys.argv) > 2: iterarg = int(sys.argv[2])
+        if iterarg == iter:
             if sys.argv[1].startswith("map"):
                 if mapconf: mapconf()
                 if hasattr(mapper,"coded") and (mapper.coded or code_in): 
@@ -50,14 +53,29 @@ def run(mapper,reducer=None,combiner=None,
                 else: outputs = dumptext(outputs)
             else: outputs = dumptext((line[:-1],) for line in sys.stdin)
             for output in outputs: print "\t".join(output)
-    else: submit(sys.argv[0],parseargs(sys.argv[1:])+[("iteration",str(iter))])
+    else:
+        opts = parseargs(sys.argv[1:]) + [("iteration","%i" % iter)]
+        key,delindexes = None,[]
+        for index,(key,value) in enumerate(opts):
+            if newopts.has_key(key): delindexes.append(index)
+        for delindex in reversed(delindexes): del opts[delindex]
+        opts += newopts.iteritems()
+        retval = submit(sys.argv[0],opts)
+        if retval != 0: sys.exit(retval)
 
 class Job:
     def __init__(self): self.iters = []
     def additer(self,*args,**kwargs): self.iters.append((args,kwargs))
     def run(self):
+        scratch = "tmp/%s-%i" % (sys.argv[0],random.randint(0,sys.maxint))
         for index,(args,kwargs) in enumerate(self.iters):
-            kwargs["iter"] = str(index)
+            newopts = {}
+            if index != 0: 
+                newopts["input"] = "%s-%i" % (scratch,index-1)
+                newopts["delinputs"] = "yes"
+            if index != len(self.iters)-1:
+                newopts["output"] = "%s-%i" % (scratch,index)
+            kwargs["iter"],kwargs["newopts"] = index,newopts
             run(*args,**kwargs)
 
 def parseargs(args):
@@ -94,8 +112,11 @@ def stream(prog,opts):
     find_arg("output","Output path",None)
     find_arg("name","Job name",prog)
     find_arg("python","Python command","python")
+    find_arg("iteration","Iteration","0")
+    find_arg("delinputs","Delete inputs","no")
 
-    added_opts = {"hadoop": None,"name": None,"python": None,"iteration": "0"}
+    added_opts_keys = ["hadoop","name","python","iteration","delinputs"]
+    added_opts = dict((key,None) for key in added_opts_keys)
     key,delindexes = None,[]
     for index,(key,value) in enumerate(opts):
         if added_opts.has_key(key): 
@@ -117,7 +138,12 @@ def stream(prog,opts):
     if not os.path.exists(jardir): jardir = hadoop + "/build/contrib"
     cmd = "%s/bin/hadoop jar %s/hadoop*streaming.jar" % (hadoop,jardir)
     args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
-    sys.exit(os.system(" ".join((cmd,args))))
+    retval = os.system(" ".join((cmd,args)))
+    if added_opts["delinputs"] == "yes":
+        for key,value in opts:
+            if key == "input": 
+                os.system("%s/bin/hadoop dfs -rmr %s" % (hadoop,value))
+    sys.exit(retval)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
