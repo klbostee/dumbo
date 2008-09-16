@@ -1,4 +1,4 @@
-import sys,types,os,random
+import sys,types,os,random,re
 from itertools import groupby
 from operator import itemgetter
 
@@ -115,31 +115,65 @@ def stream(prog,opts):
     find_arg("iteration","Iteration","0")
     find_arg("delinputs","Delete inputs","no")
 
-    added_opts_keys = ["hadoop","name","python","iteration","delinputs"]
-    added_opts = dict((key,None) for key in added_opts_keys)
+    added_opts_keys = ["hadoop","name","python","iteration","delinputs",
+        "libjar","inputformat","numMapTasks"]
+    added_opts = dict((key,[]) for key in added_opts_keys)
     key,delindexes = None,[]
     for index,(key,value) in enumerate(opts):
-        if added_opts.has_key(key): 
-            added_opts[key] = value
+        if added_opts.has_key(key):
+            added_opts[key].append(value)
             delindexes.append(index)
     for delindex in reversed(delindexes): del opts[delindex] 
 
-    python,iter = added_opts["python"],int(added_opts["iteration"])
+    hadoop = added_opts["hadoop"][0]
+    streamingjardir = hadoop + "/contrib/streaming"
+    if not os.path.exists(streamingjardir):
+        streamingjardir = hadoop + "/contrib"
+    if not os.path.exists(streamingjardir):
+        streamingjardir = hadoop + "/build/contrib/streaming"
+    if not os.path.exists(streamingjardir): 
+        streamingjardir = hadoop + "/build/contrib"
+    dumbojardir = hadoop + "/contrib/dumbo"
+    if not os.path.exists(dumbojardir):
+        dumbojardir = hadoop + "/contrib"
+    if not os.path.exists(dumbojardir):
+        dumbojardir = hadoop + "/build/contrib/dumbo"
+    if not os.path.exists(dumbojardir): 
+        dumbojardir = hadoop + "/build/contrib"
+
+    inputformat_shortcuts = {
+        "textascode": "TextAsCodeInputFormat", 
+        "sequencefileascode": "SequenceFileAsCodeInputFormat"}
+    if added_opts["inputformat"]:
+        inputformat = added_opts["inputformat"][0]
+        if inputformat_shortcuts.has_key(inputformat.lower()):
+            inputformat = "org.apache.hadoop.dumbo." + \
+                inputformat_shortcuts[inputformat.lower()]
+            regex = re.compile("hadoop.*dumbo\.jar")
+            added_opts["libjar"].append(dumbojardir + "/" + filter(regex.match,
+                os.listdir(dumbojardir))[-1])
+        opts.append(("inputformat",inputformat))
+
+    python,iter = added_opts["python"][0],int(added_opts["iteration"][0])
     opts.append(("mapper","%s %s map %i" % (python,prog.split("/")[-1],iter)))
     opts.append(("reducer","%s %s red %i" % (python,prog.split("/")[-1],iter)))
     opts.append(("file",prog))
     opts.append(("file",sys.argv[0]))
-    opts.append(("jobconf","mapred.job.name=%s" % added_opts["name"]))
+    opts.append(("jobconf","mapred.job.name=%s" % added_opts["name"][0]))
+    if added_opts["numMapTasks"]: opts.append(("jobconf",
+        "mapred.map.tasks=%s" % added_opts["numMapTasks"][0]))
 
-    hadoop = added_opts["hadoop"]
-    jardir = hadoop + "/contrib/streaming"
-    if not os.path.exists(jardir): jardir = hadoop + "/contrib"
-    if not os.path.exists(jardir): jardir = hadoop + "/build/contrib/streaming"
-    if not os.path.exists(jardir): jardir = hadoop + "/build/contrib"
-    cmd = "%s/bin/hadoop jar %s/hadoop*streaming.jar" % (hadoop,jardir)
+    classpath=""
+    for libjar in added_opts["libjar"]:
+        opts.append(("file",libjar))
+        classpath += libjar + ":"
+    regex = re.compile("hadoop.*streaming\.jar")
+    cmd = "%s/bin/hadoop jar %s/%s" % (hadoop,streamingjardir,
+        filter(regex.match,os.listdir(streamingjardir))[-1])
     args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
-    retval = os.system(" ".join((cmd,args)))
-    if added_opts["delinputs"] == "yes":
+    retval = os.system('HADOOP_CLASSPATH="%s$HADOOP_CLASSPATH" %s' % \
+        (classpath," ".join((cmd,args))))
+    if added_opts["delinputs"][0] == "yes":
         for key,value in opts:
             if key == "input": 
                 os.system("%s/bin/hadoop dfs -rmr %s" % (hadoop,value))
