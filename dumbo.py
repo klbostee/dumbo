@@ -32,6 +32,11 @@ def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,code_in=False,code_out=False,
         iter=0,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
+        try:
+            regex = re.compile(".*\.egg")
+            for eggfile in filter(regex.match,os.listdir(".")):
+                sys.path.append(eggfile)  # add eggs in currrent dir to path
+        except: pass
         iterarg = 0  # default value
         if len(sys.argv) > 2: iterarg = int(sys.argv[2])
         if iterarg == iter:
