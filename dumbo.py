@@ -217,7 +217,7 @@ def cat(path,opts):
     except IOError: pass  # ignore
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print "Usages:"
         print "  python -m dumbo run <python program> [<options>]"
         print "  python -m dumbo cat <path> [<options>]"
