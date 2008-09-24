@@ -151,12 +151,13 @@ def streamlocally(prog,opts):
     if (not addedopts["input"]) or (not addedopts["output"]):
         print >>sys.stderr,"ERROR: input or output not specified"
         sys.exit(1)
-    input,output = addedopts["input"][0],addedopts["output"][0]
+    inputs = " ".join("'%s'" % input for input in addedopts["input"])
+    output = addedopts["output"][0]
     pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
     cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
         for arg in addedopts["cmdenv"])
-    retval = execute("%s %s %s < '%s' | LC_ALL=C sort | %s %s %s > '%s'" % \
-        (pythonenv,cmdenv,mapper,input,pythonenv,cmdenv,reducer,output))
+    retval = execute("cat %s | %s %s %s | LC_ALL=C sort | %s %s %s > '%s'" % \
+        (inputs,pythonenv,cmdenv,mapper,pythonenv,cmdenv,reducer,output))
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for file in addedopts["input"]: execute("rm " + file)
     sys.exit(retval)
