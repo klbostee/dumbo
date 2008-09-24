@@ -160,7 +160,7 @@ def streamlocally(prog,opts):
 
 def streamonhadoop(prog,opts,hadoop):
     addedopts = delopts(opts,["name","delinputs","libegg","libjar","inputformat",
-        "nummaptasks","numreducetasks"])
+        "nummaptasks","numreducetasks","priority"])
     opts.append(("file",prog))
     opts.append(("file",sys.argv[0]))
     if not addedopts["name"]: opts.append(("jobconf","mapred.job.name=" + prog))
@@ -169,6 +169,8 @@ def streamonhadoop(prog,opts,hadoop):
         "mapred.map.tasks=%s" % addedopts["nummaptasks"][0]))
     if addedopts["numreducetasks"]: opts.append(("numReduceTasks",
         addedopts["numreducetasks"][0]))
+    if addedopts["priority"]: opts.append(("jobconf",
+        "mapred.job.priority=%s" % addedopts["priority"][0]))
     streamingjar,dumbojar = findjar(hadoop,"streaming"),findjar(hadoop,"dumbo")
     if not streamingjar:
         print >>sys.stderr,"ERROR: Streaming jar not found"
