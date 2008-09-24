@@ -1,4 +1,4 @@
-import sys,types,os,random,re
+import sys,types,os,random,re,popen2
 from itertools import groupby
 from operator import itemgetter
 
@@ -77,6 +77,7 @@ class Job:
             if index != 0: 
                 newopts["input"] = "%s-%i" % (scratch,index-1)
                 newopts["delinputs"] = "yes"
+                newopts["inputformat"] = "default"
             if index != len(self.iters)-1:
                 newopts["output"] = "%s-%i" % (scratch,index)
             kwargs["iter"],kwargs["newopts"] = index,newopts
@@ -145,15 +146,17 @@ def stream(prog,opts):
    
 def streamlocally(prog,opts):
     addedopts = delopts(opts,["input","output","mapper","reducer","libegg",
-        "delinputs"])
+        "delinputs","cmdenv"])
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
     if (not addedopts["input"]) or (not addedopts["output"]):
         print >>sys.stderr,"ERROR: input or output not specified"
         sys.exit(1)
     input,output = addedopts["input"][0],addedopts["output"][0]
     pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
-    retval = execute("%s %s < '%s' | LC_ALL=C sort | %s %s > '%s'" % \
-        (pythonenv,mapper,input,pythonenv,reducer,output))
+    cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
+        for arg in addedopts["cmdenv"])
+    retval = execute("%s %s %s < '%s' | LC_ALL=C sort | %s %s %s > '%s'" % \
+        (pythonenv,cmdenv,mapper,input,pythonenv,cmdenv,reducer,output))
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for file in addedopts["input"]: execute("rm " + file)
     sys.exit(retval)
@@ -179,14 +182,11 @@ def streamonhadoop(prog,opts,hadoop):
     if not streamingjar:
         print >>sys.stderr,"ERROR: Streaming jar not found"
         sys.exit(0)
-    if (not dumbojar) and addedopts["inputformat"]:
-        print >>sys.stderr,"ERROR: Dumbo jar not found"
-        sys.exit(0)
     else:
         inputformat_shortcuts = {
             "textascode": "TextAsCodeInputFormat", 
             "sequencefileascode": "SequenceFileAsCodeInputFormat"}
-        if addedopts["inputformat"]:
+        if addedopts["inputformat"] and addedopts["inputformat"][0] != 'default':
             inputformat = addedopts["inputformat"][0]
             if inputformat_shortcuts.has_key(inputformat.lower()):
                 inputformat = "org.apache.hadoop.dumbo." + \
