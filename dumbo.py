@@ -243,4 +243,4 @@ if __name__ == "__main__":
     if sys.argv[1] == "submit": submit(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "stream": stream(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "cat": cat(sys.argv[2],parseargs(sys.argv[2:]))
-    else: stream(sys.argv[1],parseargs(sys.argv[1:]))
+    else: stream(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compatibility
