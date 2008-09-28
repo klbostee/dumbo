@@ -133,8 +133,7 @@ def envdef(varname,files,opts):
 def submit(prog,opts):
     addedopts = getopts(opts,["libegg"],delete=False)
     pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
-    if execute("python '%s'" % prog,opts,pythonenv) == 32512:
-        print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
+    return execute("python '%s'" % prog,opts,pythonenv)
 
 def stream(prog,opts):
     addedopts = getopts(opts,["python","iteration","hadoop","fake"])
@@ -146,8 +145,8 @@ def stream(prog,opts):
     opts.append(("reducer","%s %s red %i" % (python,prog.split("/")[-1],iter)))
     if addedopts["fake"] and addedopts["fake"][0] == "yes":
         os.system = lambda cmd: None  # not very clean, but it's easy and works
-    if not addedopts["hadoop"]: streamlocally(prog,opts)
-    else: streamonhadoop(prog,opts,addedopts["hadoop"][0])
+    if not addedopts["hadoop"]: return streamlocally(prog,opts)
+    else: return streamonhadoop(prog,opts,addedopts["hadoop"][0])
    
 def streamlocally(prog,opts):
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
@@ -155,7 +154,7 @@ def streamlocally(prog,opts):
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
     if (not addedopts["input"]) or (not addedopts["output"]):
         print >>sys.stderr,"ERROR: input or output not specified"
-        sys.exit(1)
+        return 1
     inputs = " ".join("'%s'" % input for input in addedopts["input"])
     output = addedopts["output"][0]
     pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
@@ -165,7 +164,7 @@ def streamlocally(prog,opts):
         (inputs,pythonenv,cmdenv,mapper,pythonenv,cmdenv,reducer,output))
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for file in addedopts["input"]: execute("rm " + file)
-    sys.exit(retval)
+    return retval
 
 def streamonhadoop(prog,opts,hadoop):
     addedopts = getopts(opts,["name","delinputs","libegg","libjar","inputformat",
@@ -187,7 +186,7 @@ def streamonhadoop(prog,opts,hadoop):
     streamingjar,dumbojar = findjar(hadoop,"streaming"),findjar(hadoop,"dumbo")
     if not streamingjar:
         print >>sys.stderr,"ERROR: Streaming jar not found"
-        sys.exit(0)
+        return 1
     else:
         inputformat_shortcuts = {
             "textascode": "TextAsCodeInputFormat", 
@@ -207,18 +206,18 @@ def streamonhadoop(prog,opts,hadoop):
         for key,value in opts:
             if key == "input":
                 execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
-    sys.exit(retval)
+    return retval
     
 def cat(path,opts):
     addedopts = getopts(opts,["hadoop","type","libjar"])
     if not addedopts["hadoop"]:
         print >>sys.stderr,"ERROR: Hadoop dir not specified"
-        sys.exit(0)
+        return 1
     hadoop = addedopts["hadoop"][0]
     dumbojar = findjar(hadoop,"dumbo")
     if not dumbojar:
         print >>sys.stderr,"ERROR: Dumbo jar not found"
-        sys.exit(0)
+        return 1
     if not addedopts["type"]: type = "text"
     else: type = addedopts["type"][0]
     hadoopenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],opts)
@@ -232,6 +231,7 @@ def cat(path,opts):
         for output in outputs: print "\t".join(output)
         process.close()
     except IOError: pass  # ignore
+    return 0
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -240,7 +240,8 @@ if __name__ == "__main__":
         print "  python -m dumbo stream <python program> [<options>]"
         print "  python -m dumbo cat <path> [<options>]"
         sys.exit(1)
-    if sys.argv[1] == "submit": submit(sys.argv[2],parseargs(sys.argv[2:]))
-    elif sys.argv[1] == "stream": stream(sys.argv[2],parseargs(sys.argv[2:]))
-    elif sys.argv[1] == "cat": cat(sys.argv[2],parseargs(sys.argv[2:]))
-    else: stream(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compatibility
+    if sys.argv[1] == "submit": retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "stream": retval = stream(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "cat": retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
+    else: retval = stream(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compat
+    sys.exit(retval)
