@@ -86,6 +86,19 @@ class Job:
             kwargs["iter"],kwargs["newopts"] = index,newopts
             run(*args,**kwargs)
 
+def incrcounter(group,counter,amount):
+    print >>sys.stderr,"reporter:counter:%s,%s,%s" % (group,counter,amount)
+
+def setstatus(message):
+    print >>sys.stderr,"reporter:status:%s" % message
+
+class Counter:
+    def __init__(self,name,group="counters"):
+        self.group = group
+        self.name = name
+    def __iadd__(self,amount):
+        incrcounter(self.group,self.name,amount)
+
 def parseargs(args):
     opts,key,values = [],None,[]
     for arg in args:
