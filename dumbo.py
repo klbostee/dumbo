@@ -65,9 +65,10 @@ def run(mapper,reducer=None,combiner=None,
             if newopts.has_key(key): delindexes.append(index)
         for delindex in reversed(delindexes): del opts[delindex]
         opts += newopts.iteritems()
-        cmd = "python -m dumbo stream '%s'" % sys.argv[0]
-        if execute(cmd,opts,printcmd=False) == 32512:
+        retval = execute("python -m dumbo stream '%s'" % sys.argv[0],opts,printcmd=False)
+        if retval == 127:
             print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
+        if retval != 0: sys.exit(retval)
 
 class Job:
     def __init__(self): self.iters = []
@@ -112,7 +113,7 @@ def execute(cmd,opts=[],precmd="",printcmd=True):
     args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
     if args: cmd = " ".join((cmd,args))
     if printcmd: print "EXEC:",cmd
-    return os.system(cmd)
+    return os.system(cmd) / 256  # exit status
 
 def findjar(hadoop,name):
     jardir = hadoop + "/contrib/" + name
