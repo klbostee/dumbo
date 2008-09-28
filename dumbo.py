@@ -1,4 +1,4 @@
-import sys,types,os,random,re,popen2
+import sys,types,os,random,re
 from itertools import groupby
 from operator import itemgetter
 
