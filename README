@@ -9,7 +9,13 @@ USAGE
 
 /usr/local/hadoop/bin/hadoop dfs -put examples/brian.txt brian.txt
 
-python examples/wordcount.py -hadoop /usr/local/hadoop \
+python examples/wordcount.py -hadoop /path/to/hadoop \
 -file excludes.txt -input brian.txt -output brian-wc
 
 /usr/local/hadoop/bin/hadoop dfs -getmerge brian-wc brian-wc.txt
+
+
+MORE INFO
+"""""""""
+
+http://github.com/klbostee/dumbo/wikis
