@@ -1,4 +1,4 @@
-import sys,types,os,random,re
+import sys,types,os,random,re,types
 from itertools import groupby
 from operator import itemgetter
 
@@ -35,8 +35,11 @@ def run(mapper,reducer=None,combiner=None,
         try:
             regex = re.compile(".*\.egg")
             for eggfile in filter(regex.match,os.listdir(".")):
-                sys.path.append(eggfile)  # add eggs in currrent dir to path
+                sys.path.append(eggfile)  # add eggs in current dir to path
         except: pass
+        if type(mapper) == types.ClassType: mapper = mapper().map
+        if type(reducer) == types.ClassType: reducer = reducer().reduce
+        if type(combiner) == types.ClassType: combiner = combiner().reduce
         iterarg = 0  # default value
         if len(sys.argv) > 2: iterarg = int(sys.argv[2])
         if iterarg == iter:
