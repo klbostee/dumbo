@@ -29,8 +29,8 @@ def loadtext(inputs):
     for input in inputs: yield (None,input)
 
 def run(mapper,reducer=None,combiner=None,
-        mapconf=None,redconf=None,code_in=False,code_out=False,
-        iter=0,newopts={}):
+        mapconf=None,redconf=None,mapclose=None,redclose=None,
+        code_in=False,code_out=False,iter=0,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
         try:
             regex = re.compile(".*\.egg")
@@ -52,6 +52,7 @@ def run(mapper,reducer=None,combiner=None,
                 if combiner: outputs = iterreduce(sorted(outputs),combiner)
                 if reducer or code_out: outputs = dumpcode(outputs)
                 else: outputs = dumptext(outputs)
+                if mapclose: mapclose()
             elif reducer: 
                 if redconf: redconf()
                 inputs = loadcode(line[:-1] for line in sys.stdin)
@@ -59,6 +60,7 @@ def run(mapper,reducer=None,combiner=None,
                 if hasattr(reducer,"coded") and (reducer.coded or code_out): 
                     outputs = dumpcode(outputs)
                 else: outputs = dumptext(outputs)
+                if redclose: redclose()
             else: outputs = dumptext((line[:-1],) for line in sys.stdin)
             for output in outputs: print "\t".join(output)
     else:
