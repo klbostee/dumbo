@@ -134,10 +134,9 @@ def execute(cmd,opts=[],precmd="",printcmd=True):
     return os.system(cmd) / 256  # exit status
 
 def findjar(hadoop,name):
-    jardir = hadoop + "/contrib/" + name
+    jardir = hadoop + "/build/contrib/" + name
+    if not os.path.exists(jardir): jardir = hadoop + "/contrib/" + name
     if not os.path.exists(jardir): jardir = hadoop + "/contrib"
-    if not os.path.exists(jardir): jardir = hadoop + "/build/contrib/" + name
-    if not os.path.exists(jardir): jardir = hadoop + "/build/contrib"
     regex = re.compile("hadoop.*" + name + "\.jar")
     try: return jardir + "/" + filter(regex.match,os.listdir(jardir))[-1]
     except: return None
@@ -155,17 +154,20 @@ def submit(prog,opts):
     return execute("python '%s'" % prog,opts,pythonenv)
 
 def stream(prog,opts):
-    addedopts = getopts(opts,["python","iteration","hadoop","fake"])
-    if not addedopts["python"]: python = "python"
-    else: python = addedopts["python"][0]
-    if not addedopts["iteration"]: iter = 0
-    else: iter = int(addedopts["iteration"][0])
-    opts.append(("mapper","%s %s map %i" % (python,prog.split("/")[-1],iter)))
-    opts.append(("reducer","%s %s red %i" % (python,prog.split("/")[-1],iter)))
+    addedopts = getopts(opts,["jumbo","fake"])
     if addedopts["fake"] and addedopts["fake"][0] == "yes":
-        os.system = lambda cmd: None  # not very clean, but it's easy and works
-    if not addedopts["hadoop"]: return streamlocally(prog,opts)
-    else: return streamonhadoop(prog,opts,addedopts["hadoop"][0])
+        os.system = lambda cmd: 0  # not very clean, but it's easy and works
+    if not addedopts["jumbo"]:
+        addedopts = getopts(opts,["python","iteration","hadoop"])
+        if not addedopts["python"]: python = "python"
+        else: python = addedopts["python"][0]
+        if not addedopts["iteration"]: iter = 0
+        else: iter = int(addedopts["iteration"][0])
+        opts.append(("mapper","%s %s map %i" % (python,prog.split("/")[-1],iter)))
+        opts.append(("reducer","%s %s red %i" % (python,prog.split("/")[-1],iter)))
+        if not addedopts["hadoop"]: return streamlocally(prog,opts)
+        else: return streamonhadoop(prog,opts,addedopts["hadoop"][0])
+    else: return streamonjumbo(prog,opts)
    
 def streamlocally(prog,opts):
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
@@ -206,17 +208,16 @@ def streamonhadoop(prog,opts,hadoop):
     if not streamingjar:
         print >>sys.stderr,"ERROR: Streaming jar not found"
         return 1
-    else:
-        inputformat_shortcuts = {
-            "textascode": "TextAsCodeInputFormat", 
-            "sequencefileascode": "SequenceFileAsCodeInputFormat"}
-        if addedopts["inputformat"] and addedopts["inputformat"][0] != 'default':
-            inputformat = addedopts["inputformat"][0]
-            if inputformat_shortcuts.has_key(inputformat.lower()):
-                inputformat = "org.apache.hadoop.dumbo." + \
-                    inputformat_shortcuts[inputformat.lower()]
-                addedopts["libjar"].append(dumbojar)
-            opts.append(("inputformat",inputformat))
+    inputformat_shortcuts = {
+        "textascode": "TextAsCodeInputFormat", 
+        "sequencefileascode": "SequenceFileAsCodeInputFormat"}
+    if addedopts["inputformat"] and addedopts["inputformat"][0] != 'default':
+        inputformat = addedopts["inputformat"][0]
+        if inputformat_shortcuts.has_key(inputformat.lower()):
+            inputformat = "org.apache.hadoop.dumbo." + \
+                inputformat_shortcuts[inputformat.lower()]
+            addedopts["libjar"].append(dumbojar)
+        opts.append(("inputformat",inputformat))
     pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
     hadoopenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],opts) 
     cmd = hadoop + "/bin/hadoop jar " + streamingjar
@@ -226,7 +227,27 @@ def streamonhadoop(prog,opts,hadoop):
             if key == "input":
                 execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
     return retval
-    
+
+def streamonjumbo(prog,opts):
+    addedopts = getopts(opts,["hadoop","libegg","libjar","delinputs"])
+    if not addedopts["hadoop"]:
+        print >>sys.stderr,"ERROR: Hadoop dir not specified"
+        return 1
+    hadoop = addedopts["hadoop"][0]
+    jumbojar = findjar(hadoop,"jumbo")
+    if not jumbojar:
+        print >>sys.stderr,"ERROR: Jumbo jar not found"
+        return 1
+    cmd = hadoop + "/bin/hadoop jar " + jumbojar + " " + prog
+    pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
+    hadoopenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],opts) 
+    retval = execute(cmd,opts," ".join((pythonenv,hadoopenv)))
+    if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
+        for key,value in opts:
+            if key == "input":
+                execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
+    return retval
+
 def cat(path,opts):
     addedopts = getopts(opts,["hadoop","type","libjar"])
     if not addedopts["hadoop"]:
