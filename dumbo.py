@@ -83,7 +83,7 @@ class Job:
     def __init__(self): self.iters = []
     def additer(self,*args,**kwargs): self.iters.append((args,kwargs))
     def run(self):
-        scratch = "/tmp/%s-%i" % (sys.argv[0],random.randint(0,sys.maxint))
+        scratch = "dumbo-tmp-%i" % random.randint(0,sys.maxint)
         for index,(args,kwargs) in enumerate(self.iters):
             newopts = {}
             if index != 0: 
