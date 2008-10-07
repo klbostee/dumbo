@@ -65,6 +65,10 @@ def run(mapper,reducer=None,combiner=None,
             for output in outputs: print "\t".join(output)
     else:
         opts = parseargs(sys.argv[1:]) + [("iteration","%i" % iter)]
+        if hasattr(mapper,"coded") and (mapper.coded or code_in):
+            opts.append(("codein","yes"))
+        if hasattr(reducer,"coded") and (reducer.coded or code_out):
+            opts.append(("codeout","yes"))
         key,delindexes = None,[]
         for index,(key,value) in enumerate(opts):
             if newopts.has_key(key): delindexes.append(index)
@@ -141,24 +145,28 @@ def findjar(hadoop,name):
     try: return jardir + "/" + filter(regex.match,os.listdir(jardir))[-1]
     except: return None
 
-def envdef(varname,files,opts):
-    path=""
+def envdef(varname,files,optname=None,opts=None,commasep=False):
+    path,optvals="",[]
     for file in files:
-        opts.append(("file",file))
         path += file + ":"
+        optvals.append(file)
+    if optname and optvals:
+        if not commasep: 
+            for optval in optvals: opts.append((optname,optval))
+        else: opts.append((optname,",".join(optvals)))
     return '%s="%s$%s"' % (varname,path,varname)
 
 def submit(prog,opts):
     addedopts = getopts(opts,["libegg"],delete=False)
-    pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
-    return execute("python '%s'" % prog,opts,pythonenv)
+    pyenv = envdef("PYTHONPATH",addedopts["libegg"])
+    return execute("python '%s'" % prog,opts,pyenv)
 
 def stream(prog,opts):
     addedopts = getopts(opts,["jumbo","fake"])
     if addedopts["fake"] and addedopts["fake"][0] == "yes":
         os.system = lambda cmd: 0  # not very clean, but it's easy and works
     if not addedopts["jumbo"]:
-        addedopts = getopts(opts,["python","iteration","hadoop"])
+        addedopts = getopts(opts,["python","iteration","hadoop","codein","codeout"])
         if not addedopts["python"]: python = "python"
         else: python = addedopts["python"][0]
         if not addedopts["iteration"]: iter = 0
@@ -178,11 +186,11 @@ def streamlocally(prog,opts):
         return 1
     inputs = " ".join("'%s'" % input for input in addedopts["input"])
     output = addedopts["output"][0]
-    pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
+    pyenv = envdef("PYTHONPATH",addedopts["libegg"])
     cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
         for arg in addedopts["cmdenv"])
     retval = execute("cat %s | %s %s %s | LC_ALL=C sort | %s %s %s > '%s'" % \
-        (inputs,pythonenv,cmdenv,mapper,pythonenv,cmdenv,reducer,output))
+        (inputs,pyenv,cmdenv,mapper,pyenv,cmdenv,reducer,output))
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for file in addedopts["input"]: execute("rm " + file)
     return retval
@@ -218,10 +226,10 @@ def streamonhadoop(prog,opts,hadoop):
                 inputformat_shortcuts[inputformat.lower()]
             addedopts["libjar"].append(dumbojar)
         opts.append(("inputformat",inputformat))
-    pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
-    hadoopenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],opts) 
+    envdef("PYTHONPATH",addedopts["libegg"],"file",opts)
+    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",opts) 
     cmd = hadoop + "/bin/hadoop jar " + streamingjar
-    retval = execute(cmd,opts," ".join((pythonenv,hadoopenv)))
+    retval = execute(cmd,opts,hadenv)
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for key,value in opts:
             if key == "input":
@@ -229,7 +237,8 @@ def streamonhadoop(prog,opts,hadoop):
     return retval
 
 def streamonjumbo(prog,opts):
-    addedopts = getopts(opts,["hadoop","libegg","libjar","delinputs"])
+    addedopts = getopts(opts,["hadoop","libegg","libjar","file","delinputs",
+                              "inputformat","outputformat","codein","codeout"])
     if not addedopts["hadoop"]:
         print >>sys.stderr,"ERROR: Hadoop dir not specified"
         return 1
@@ -238,10 +247,19 @@ def streamonjumbo(prog,opts):
     if not jumbojar:
         print >>sys.stderr,"ERROR: Jumbo jar not found"
         return 1
+    if addedopts["inputformat"]:
+        opts.append(("inputformat",addedopts["inputformat"][0]))
+    elif addedopts["codein"]: opts.append(("inputformat","code"))
+    if addedopts["outputformat"]:
+        opts.append(("outputformat",addedopts["outputformat"][0]))
+    elif addedopts["codeout"]: opts.append(("outputformat","code"))
+    envdef("PYTHONPATH",addedopts["libegg"],"files",opts,True)
+    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"libjars",opts,True)
+    fileopts = getopts(opts,["files"])["files"]
+    for file in addedopts["file"]: fileopts.append(file)
+    if fileopts: opts.append(("files",",".join(fileopts)))
     cmd = hadoop + "/bin/hadoop jar " + jumbojar + " " + prog
-    pythonenv = envdef("PYTHONPATH",addedopts["libegg"],opts)
-    hadoopenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],opts) 
-    retval = execute(cmd,opts," ".join((pythonenv,hadoopenv)))
+    retval = execute(cmd,opts,hadenv)
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for key,value in opts:
             if key == "input":
@@ -260,12 +278,12 @@ def cat(path,opts):
         return 1
     if not addedopts["type"]: type = "text"
     else: type = addedopts["type"][0]
-    hadoopenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],opts)
+    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"])
     try:
         if type[:4] == "text": codetype = "textascode"
         else: codetype = "sequencefileascode"
         process = os.popen("%s %s/bin/hadoop jar %s %s %s" % \
-            (hadoopenv,hadoop,dumbojar,codetype,path))    
+            (hadenv,hadoop,dumbojar,codetype,path))    
         if type[-6:] == "ascode": outputs = dumpcode(loadcode(process))
         else: outputs = dumptext(loadcode(process))
         for output in outputs: print "\t".join(output)
