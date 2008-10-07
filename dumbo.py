@@ -253,12 +253,14 @@ def streamonjumbo(prog,opts):
     if addedopts["outputformat"]:
         opts.append(("outputformat",addedopts["outputformat"][0]))
     elif addedopts["codeout"]: opts.append(("outputformat","code"))
-    envdef("PYTHONPATH",addedopts["libegg"],"files",opts,True)
-    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"libjars",opts,True)
+    genopts = []
+    envdef("PYTHONPATH",addedopts["libegg"],"files",genopts,True)
+    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"libjars",genopts,True)
     fileopts = getopts(opts,["files"])["files"]
     for file in addedopts["file"]: fileopts.append(file)
     if fileopts: opts.append(("files",",".join(fileopts)))
-    cmd = hadoop + "/bin/hadoop jar " + jumbojar + " " + prog
+    genargs = " ".join("-%s '%s'" % (key,value) for (key,value) in genopts)
+    cmd = hadoop + "/bin/hadoop jar " + genargs + " " + jumbojar + " " + prog
     retval = execute(cmd,opts,hadenv)
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for key,value in opts:
