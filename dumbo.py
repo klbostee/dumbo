@@ -243,9 +243,9 @@ def streamonjumbo(prog,opts):
         print >>sys.stderr,"ERROR: Hadoop dir not specified"
         return 1
     hadoop = addedopts["hadoop"][0]
-    jumbojar = findjar(hadoop,"jumbo")
-    if not jumbojar:
-        print >>sys.stderr,"ERROR: Jumbo jar not found"
+    dumbojar = findjar(hadoop,"dumbo")
+    if not dumbojar:
+        print >>sys.stderr,"ERROR: Dumbo jar not found"
         return 1
     if addedopts["inputformat"]:
         opts.append(("inputformat",addedopts["inputformat"][0]))
@@ -260,7 +260,7 @@ def streamonjumbo(prog,opts):
     for file in addedopts["file"]: fileopts.append(file)
     if fileopts: opts.append(("files",",".join(fileopts)))
     genargs = " ".join("-%s '%s'" % (key,value) for (key,value) in genopts)
-    cmd = hadoop + "/bin/hadoop jar " + genargs + " " + jumbojar + " " + prog
+    cmd = hadoop + "/bin/hadoop jar " + genargs + " " + dumbojar + " jumbo " + prog
     retval = execute(cmd,opts,hadenv)
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for key,value in opts:
@@ -284,7 +284,7 @@ def cat(path,opts):
     try:
         if type[:4] == "text": codetype = "textascode"
         else: codetype = "sequencefileascode"
-        process = os.popen("%s %s/bin/hadoop jar %s %s %s" % \
+        process = os.popen("%s %s/bin/hadoop jar %s catpath %s %s" % \
             (hadenv,hadoop,dumbojar,codetype,path))    
         if type[-6:] == "ascode": outputs = dumpcode(loadcode(process))
         else: outputs = dumptext(loadcode(process))
