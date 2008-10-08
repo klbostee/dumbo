@@ -105,7 +105,7 @@ class Counter:
     def __init__(self,name,group="counters"):
         self.group = group
         self.name = name
-    def __iadd__(self,amount):
+    def incr(self,amount):
         incrcounter(self.group,self.name,amount)
 
 def parseargs(args):
