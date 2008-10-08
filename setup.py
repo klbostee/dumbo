@@ -25,7 +25,7 @@ class TestCommand(Command):
         t.run(tests)
 
 setup(name='dumbo',
-      version='0.12',
+      version='0.13',
       py_modules=['dumbo'],
       author='Klaas Bosteels',
       author_email='klaas@last.fm',
