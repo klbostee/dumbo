@@ -69,12 +69,13 @@ def run(mapper,reducer=None,combiner=None,
             opts.append(("codein","yes"))
         if hasattr(reducer,"coded") and (reducer.coded or code_out):
             opts.append(("codeout","yes"))
+        if combiner: opts.append(("combine","yes"))
         key,delindexes = None,[]
         for index,(key,value) in enumerate(opts):
             if newopts.has_key(key): delindexes.append(index)
         for delindex in reversed(delindexes): del opts[delindex]
         opts += newopts.iteritems()
-        retval = execute("python -m dumbo stream '%s'" % sys.argv[0],opts,printcmd=False)
+        retval = execute("python -m dumbo start '%s'" % sys.argv[0],opts,printcmd=False)
         if retval == 127:
             print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
         if retval != 0: sys.exit(retval)
@@ -161,23 +162,24 @@ def submit(prog,opts):
     pyenv = envdef("PYTHONPATH",addedopts["libegg"])
     return execute("python '%s'" % prog,opts,pyenv)
 
-def stream(prog,opts):
+def start(prog,opts):
     addedopts = getopts(opts,["jumbo","fake"])
     if addedopts["fake"] and addedopts["fake"][0] == "yes":
         os.system = lambda cmd: 0  # not very clean, but it's easy and works
     if not addedopts["jumbo"]:
-        addedopts = getopts(opts,["python","iteration","hadoop","codein","codeout"])
+        addedopts = getopts(opts,["python","iteration","hadoop",
+                                  "codein","codeout","combine"])
         if not addedopts["python"]: python = "python"
         else: python = addedopts["python"][0]
         if not addedopts["iteration"]: iter = 0
         else: iter = int(addedopts["iteration"][0])
         opts.append(("mapper","%s %s map %i" % (python,prog.split("/")[-1],iter)))
         opts.append(("reducer","%s %s red %i" % (python,prog.split("/")[-1],iter)))
-        if not addedopts["hadoop"]: return streamlocally(prog,opts)
-        else: return streamonhadoop(prog,opts,addedopts["hadoop"][0])
-    else: return streamonjumbo(prog,opts)
+        if not addedopts["hadoop"]: return startlocally(prog,opts)
+        else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
+    else: return startonjumbo(prog,opts)
    
-def streamlocally(prog,opts):
+def startlocally(prog,opts):
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
         "delinputs","cmdenv"])
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
@@ -195,7 +197,7 @@ def streamlocally(prog,opts):
         for file in addedopts["input"]: execute("rm " + file)
     return retval
 
-def streamonhadoop(prog,opts,hadoop):
+def startonstreaming(prog,opts,hadoop):
     addedopts = getopts(opts,["name","delinputs","libegg","libjar","inputformat",
         "nummaptasks","numreducetasks","priority","cachefile","cachearchive"])
     opts.append(("file",prog))
@@ -236,7 +238,7 @@ def streamonhadoop(prog,opts,hadoop):
                 execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
     return retval
 
-def streamonjumbo(prog,opts):
+def startonjumbo(prog,opts):
     addedopts = getopts(opts,["hadoop","libegg","libjar","file","delinputs",
                               "inputformat","outputformat","codein","codeout"])
     if not addedopts["hadoop"]:
@@ -297,11 +299,11 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print "Usages:"
         print "  python -m dumbo submit <python program> [<options>]"
-        print "  python -m dumbo stream <python program> [<options>]"
+        print "  python -m dumbo start <python program> [<options>]"
         print "  python -m dumbo cat <path> [<options>]"
         sys.exit(1)
     if sys.argv[1] == "submit": retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
-    elif sys.argv[1] == "stream": retval = stream(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "start": retval = start(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "cat": retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
-    else: retval = stream(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compat
+    else: retval = start(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compat
     sys.exit(retval)
