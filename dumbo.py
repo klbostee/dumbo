@@ -139,8 +139,9 @@ def execute(cmd,opts=[],precmd="",printcmd=True,stdout=sys.stdout,stderr=sys.std
     return system(cmd,stdout,stderr)
     
 def system(cmd,stdout=sys.stdout,stderr=sys.stderr):
+    if sys.version[:3] == "2.4": return os.system(cmd) / 256
     proc = subprocess.Popen(cmd,shell=True,stdout=stdout,stderr=stderr)
-    return os.waitpid(proc.pid,0)[1] / 256  # exit status
+    return os.waitpid(proc.pid,0)[1] / 256
 
 def findjar(hadoop,name):
     jardir = hadoop + "/build/contrib/" + name
