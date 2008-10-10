@@ -1,4 +1,4 @@
-import sys,types,os,random,re,types
+import sys,types,os,random,re,types,subprocess
 from itertools import groupby
 from operator import itemgetter
 
@@ -131,12 +131,16 @@ def getopts(opts,keys,delete=True):
         for delindex in reversed(delindexes): del opts[delindex]
     return askedopts
 
-def execute(cmd,opts=[],precmd="",printcmd=True):
+def execute(cmd,opts=[],precmd="",printcmd=True,stdout=sys.stdout,stderr=sys.stderr):
     if precmd: cmd = " ".join((precmd,cmd))
     args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
     if args: cmd = " ".join((cmd,args))
     if printcmd: print "EXEC:",cmd
-    return os.system(cmd) / 256  # exit status
+    return system(cmd,stdout,stderr)
+    
+def system(cmd,stdout=sys.stdout,stderr=sys.stderr):
+    proc = subprocess.Popen(cmd,shell=True,stdout=stdout,stderr=stderr)
+    return os.waitpid(proc.pid,0)[1] / 256  # exit status
 
 def findjar(hadoop,name):
     jardir = hadoop + "/build/contrib/" + name
@@ -157,15 +161,17 @@ def envdef(varname,files,optname=None,opts=None,commasep=False):
         else: opts.append((optname,",".join(optvals)))
     return '%s="%s$%s"' % (varname,path,varname)
 
-def submit(prog,opts):
+def submit(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
     addedopts = getopts(opts,["libegg"],delete=False)
     pyenv = envdef("PYTHONPATH",addedopts["libegg"])
-    return execute("python '%s'" % prog,opts,pyenv)
+    return execute("python '%s'" % prog,opts,pyenv,stdout=stdout,stderr=stderr)
 
 def start(prog,opts):
     addedopts = getopts(opts,["jumbo","fake"])
     if addedopts["fake"] and addedopts["fake"][0] == "yes":
-        os.system = lambda cmd: 0  # not very clean, but it's easy and works
+        def dummysystem(*args,**kwargs): return 0
+        global system
+        system = dummysystem  # not very clean, but it's easy and it works...
     if not addedopts["jumbo"]:
         addedopts = getopts(opts,["python","iteration","hadoop",
                                   "codein","codeout","combine"])
@@ -173,8 +179,9 @@ def start(prog,opts):
         else: python = addedopts["python"][0]
         if not addedopts["iteration"]: iter = 0
         else: iter = int(addedopts["iteration"][0])
-        opts.append(("mapper","%s %s map %i" % (python,prog.split("/")[-1],iter)))
-        opts.append(("reducer","%s %s red %i" % (python,prog.split("/")[-1],iter)))
+        if addedopts["hadoop"]: prog = prog.split("/")[-1]
+        opts.append(("mapper","%s %s map %i" % (python,prog,iter)))
+        opts.append(("reducer","%s %s red %i" % (python,prog,iter)))
         if not addedopts["hadoop"]: return startlocally(prog,opts)
         else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
     else: return startonjumbo(prog,opts)
@@ -202,7 +209,8 @@ def startonstreaming(prog,opts,hadoop):
         "nummaptasks","numreducetasks","priority","cachefile","cachearchive"])
     opts.append(("file",prog))
     opts.append(("file",sys.argv[0]))
-    if not addedopts["name"]: opts.append(("jobconf","mapred.job.name=" + prog))
+    if not addedopts["name"]:
+        opts.append(("jobconf","mapred.job.name=" + prog.split("/")[-1]))
     else: opts.append(("jobconf","mapred.job.name=%s" % addedopts["name"][0]))
     if addedopts["nummaptasks"]: opts.append(("jobconf",
         "mapred.map.tasks=%s" % addedopts["nummaptasks"][0]))
