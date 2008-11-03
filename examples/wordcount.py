@@ -1,3 +1,5 @@
+excludes = None
+
 def loadexcludes():
     global excludes
     file = open("excludes.txt","r")
