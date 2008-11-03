@@ -1,7 +1,22 @@
+DESCRIPTION
+"""""""""""
+
+Originally, Dumbo was just a simple Python module that made writing 
+and running Streaming programs very easy, but now it also consists 
+of some helper code in Java (although it can still be used without 
+the Java code). 
+
+
 INSTALLATION
 """"""""""""
 
-python setup.py install
+The Java code gets build together with the rest of Hadoop when the 
+"dumbo/" directory is put in Hadoop's "src/contrib/", and the Python 
+module can be installed by running
+
+sudo ant install_pymod
+
+in the "src/contrib/dumbo" directory.
 
 
 USAGE
