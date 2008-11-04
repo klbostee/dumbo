@@ -4,7 +4,8 @@ DESCRIPTION
 Originally, Dumbo was just a simple Python module that made writing 
 and running Streaming programs very easy, but now it also consists 
 of some helper code in Java (although it can still be used without 
-the Java code). 
+the Java code). More generally, Dumbo can be considered to be a 
+convenient Python API for writing MapReduce programs.
 
 
 INSTALLATION
@@ -14,9 +15,12 @@ The Java code gets build together with the rest of Hadoop when the
 "dumbo/" directory is put in Hadoop's "src/contrib/", and the Python 
 module can be installed by running
 
-sudo ant install_pymod
+sudo ant -f build-pymod.xml install_pymod
 
-in the "src/contrib/dumbo" directory.
+in the "src/contrib/dumbo" directory. If the dir "dumbo/" is a subdir
+of Hadoop's "src/contrib/", then the -f option can be omitted:
+
+sudo ant install_pymod
 
 
 USAGE

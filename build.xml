@@ -23,15 +23,11 @@ to call at top-level: ant deploy-contrib compile-core-test
 -->
 <project name="dumbo" default="jar">
 
-  <property name="src.test" location="${basedir}/src/test/java"/>
-
-  <!-- dummy compile target -->
-  <target name="compile" />
-
-  <import file="../build-contrib.xml" optional="true" />
+  <import file="../build-contrib.xml" />
+  <import file="build-pymod.xml" />
 
   <!-- Override jar target to specify main class -->
-  <target name="jar" depends="compile">
+  <target name="jar" if="buildcontrib" depends="compile">
     <jar
       jarfile="${build.dir}/hadoop-${version}-${name}.jar"
       basedir="${build.classes}"
@@ -40,28 +36,6 @@ to call at top-level: ant deploy-contrib compile-core-test
         <attribute name="Main-Class" value="org.apache.hadoop.dumbo.Launcher"/>
       </manifest>
     </jar>
-  </target>
-
-  <target name="install_pymod">
-    <exec executable="/bin/sh">
-      <arg value="-c" />
-      <arg value="cd ${basedir}/src/python/; python setup.py install; python setup.py clean -a" />
-    </exec>
-  </target>
-
-  <target name="test_pymod">
-    <exec executable="/bin/sh" resultproperty="pymodtest.failedTests">
-      <arg value="-c" />
-      <arg value="cd ${basedir}/src/test/python/; python main.py" />
-    </exec>
-    <exec executable="/bin/sh">
-      <arg value="-c" />
-      <arg value="cd ${basedir}/src/test/python/; rm *.pyc" />
-    </exec>
-    <condition property="pymodtest.success">
-      <equals arg1="${pymodtest.failedTests}" arg2="0"/>
-    </condition>
-    <fail message="TestCases failed. ${pymodtest.failedTests} failed to run successfully." unless="pymodtest.success"/>
   </target>
 
 </project>
