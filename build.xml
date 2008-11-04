@@ -27,7 +27,7 @@ to call at top-level: ant deploy-contrib compile-core-test
   <import file="build-pymod.xml" />
 
   <!-- Override jar target to specify main class -->
-  <target name="jar" if="buildcontrib" depends="compile">
+  <target name="jar" depends="compile">
     <jar
       jarfile="${build.dir}/hadoop-${version}-${name}.jar"
       basedir="${build.classes}"
