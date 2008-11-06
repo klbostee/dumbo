@@ -2,13 +2,16 @@ import sys,types,os,random,re,types,subprocess
 from itertools import groupby
 from operator import itemgetter
 
-def itermap(data,mapper):
+def itermap(data,mapfunc):
     for key,value in data: 
-        for output in mapper(key,value): yield output
+        for output in mapfunc(key,value): yield output
 
-def iterreduce(data,reducer):
+def iterreduce(data,redfunc):
     for key,values in groupby(data,itemgetter(0)):
-        for output in reducer(key,(v[1] for v in values)): yield output
+        for output in redfunc(key,(v[1] for v in values)): yield output
+
+def itermapred(data,mapfunc,redfunc):
+    return iterreduce(sorted(itermap(data,mapfunc)),redfunc)
 
 def dumpcode(outputs):
     for output in outputs: yield map(repr,output)
@@ -37,9 +40,15 @@ def run(mapper,reducer=None,combiner=None,
             for eggfile in filter(regex.match,os.listdir(".")):
                 sys.path.append(eggfile)  # add eggs in current dir to path
         except: pass
-        if type(mapper) == types.ClassType: mapper = mapper().map
-        if type(reducer) == types.ClassType: reducer = reducer().reduce
-        if type(combiner) == types.ClassType: combiner = combiner().reduce
+        if type(mapper) == types.ClassType:
+            if hasattr(mapper,'map'): mapper = mapper().map
+            else: mapper = mapper()
+        if type(reducer) == types.ClassType:
+            if hasattr(reducer,'reduce'): reducer = reducer().reduce
+            else: reducer = reducer()
+        if type(combiner) == types.ClassType:
+            if hasattr(combiner,'reduce'): combiner = combiner().reduce
+            else: combiner = combiner()
         iterarg = 0  # default value
         if len(sys.argv) > 2: iterarg = int(sys.argv[2])
         if iterarg == iter:
