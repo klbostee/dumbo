@@ -144,7 +144,7 @@ def execute(cmd,opts=[],precmd="",printcmd=True,stdout=sys.stdout,stderr=sys.std
     if precmd: cmd = " ".join((precmd,cmd))
     args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
     if args: cmd = " ".join((cmd,args))
-    if printcmd: print "EXEC:",cmd
+    if printcmd: print >>stdout,"EXEC:",cmd
     return system(cmd,stdout,stderr)
     
 def system(cmd,stdout=sys.stdout,stderr=sys.stderr):
