@@ -1,3 +1,16 @@
+"""
+Example of two iterations in one Dumbo program:
+
+>>> import dumbo
+>>> opts = [('input','brian.txt'),('output','counts.txt')]
+>>> logfile = open('log.txt','a')
+>>> dumbo.submit('itertwice.py',opts,stdout=logfile,stderr=logfile)
+0
+>>> output = dict(line[:-1].split('\\t') for line in open('counts.txt'))
+>>> int(output['e'])
+14
+"""
+
 def mapper1(key,value):
     for word in value.split(): yield word,1
 
