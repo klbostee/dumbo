@@ -2,13 +2,6 @@
 Counts how many times each non-excluded word occurs:
 
 >>> import dumbo
-
->>> loadexcludes()
->>> input = dumbo.loadtext(open('brian.txt'))
->>> output = dict(dumbo.itermapred(input,mapper,reducer))
->>> output['Brian']
-6
-
 >>> opts = [('input','brian.txt'),('output','counts.txt')]
 >>> logfile = open('log.txt','a')
 >>> dumbo.submit('wordcount.py',opts,stdout=logfile,stderr=logfile)
