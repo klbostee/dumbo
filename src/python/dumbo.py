@@ -140,6 +140,18 @@ def getopts(opts,keys,delete=True):
         for delindex in reversed(delindexes): del opts[delindex]
     return askedopts
 
+def configopts(section,prog,opts=[]):
+    from ConfigParser import SafeConfigParser
+    defaults = {'prog': prog.split("/")[-1].split(".py",1)[0],
+                'user': os.environ["USER"],"pwd": os.environ["PWD"]}
+    for key,value in opts: defaults[key] = value
+    parser = SafeConfigParser(defaults)
+    parser.read(["/etc/dumbo.conf",os.environ["HOME"]+"/.dumborc"])
+    results,excludes = [],set(defaults.iterkeys())
+    for key,value in parser.items(section):
+        if not key in excludes: results.append((key.split("_",1)[0],value))
+    return results
+
 def execute(cmd,opts=[],precmd="",printcmd=True,stdout=sys.stdout,stderr=sys.stderr):
     if precmd: cmd = " ".join((precmd,cmd))
     args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
@@ -177,26 +189,28 @@ def submit(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
     return execute("python '%s'" % prog,opts,pyenv,stdout=stdout,stderr=stderr)
 
 def start(prog,opts):
-    addedopts = getopts(opts,["jumbo","fake"])
+    try: opts += configopts("common",prog,opts)
+    except: pass  # ignore
+    addedopts = getopts(opts,["fake"])
     if addedopts["fake"] and addedopts["fake"][0] == "yes":
         def dummysystem(*args,**kwargs): return 0
         global system
         system = dummysystem  # not very clean, but it's easy and it works...
-    if not addedopts["jumbo"]:
-        addedopts = getopts(opts,["python","iteration","hadoop",
-                                  "codein","codeout","combine"])
-        if not addedopts["python"]: python = "python"
-        else: python = addedopts["python"][0]
-        if not addedopts["iteration"]: iter = 0
-        else: iter = int(addedopts["iteration"][0])
-        if addedopts["hadoop"]: prog = prog.split("/")[-1]
-        opts.append(("mapper","%s %s map %i" % (python,prog,iter)))
-        opts.append(("reducer","%s %s red %i" % (python,prog,iter)))
-        if not addedopts["hadoop"]: return startlocally(prog,opts)
-        else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
-    else: return startonjumbo(prog,opts)
+    addedopts = getopts(opts,["python","iteration","hadoop",
+                              "codein","codeout","combine"])
+    if not addedopts["python"]: python = "python"
+    else: python = addedopts["python"][0]
+    if not addedopts["iteration"]: iter = 0
+    else: iter = int(addedopts["iteration"][0])
+    if addedopts["hadoop"]: prog = prog.split("/")[-1]
+    opts.append(("mapper","%s %s map %i" % (python,prog,iter)))
+    opts.append(("reducer","%s %s red %i" % (python,prog,iter)))
+    if not addedopts["hadoop"]: return startonunix(prog,opts)
+    else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
    
-def startlocally(prog,opts):
+def startonunix(prog,opts):
+    try: opts += configopts("unix",prog,opts)
+    except: pass  # ignore
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
         "delinputs","cmdenv"])
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
@@ -215,6 +229,8 @@ def startlocally(prog,opts):
     return retval
 
 def startonstreaming(prog,opts,hadoop):
+    try: opts += configopts("streaming",prog,opts)
+    except: pass  # ignore
     addedopts = getopts(opts,["name","delinputs","libegg","libjar","inputformat",
         "nummaptasks","numreducetasks","priority","cachefile","cachearchive"])
     opts.append(("file",prog))
@@ -249,38 +265,6 @@ def startonstreaming(prog,opts,hadoop):
     envdef("PYTHONPATH",addedopts["libegg"],"file",opts)
     hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",opts) 
     cmd = hadoop + "/bin/hadoop jar " + streamingjar
-    retval = execute(cmd,opts,hadenv)
-    if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
-        for key,value in opts:
-            if key == "input":
-                execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
-    return retval
-
-def startonjumbo(prog,opts):
-    addedopts = getopts(opts,["hadoop","libegg","libjar","file","delinputs",
-                              "inputformat","outputformat","codein","codeout"])
-    if not addedopts["hadoop"]:
-        print >>sys.stderr,"ERROR: Hadoop dir not specified"
-        return 1
-    hadoop = addedopts["hadoop"][0]
-    dumbojar = findjar(hadoop,"dumbo")
-    if not dumbojar:
-        print >>sys.stderr,"ERROR: Dumbo jar not found"
-        return 1
-    if addedopts["inputformat"]:
-        opts.append(("inputformat",addedopts["inputformat"][0]))
-    elif addedopts["codein"]: opts.append(("inputformat","code"))
-    if addedopts["outputformat"]:
-        opts.append(("outputformat",addedopts["outputformat"][0]))
-    elif addedopts["codeout"]: opts.append(("outputformat","code"))
-    genopts = []
-    envdef("PYTHONPATH",addedopts["libegg"],"files",genopts,True)
-    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"libjars",genopts,True)
-    fileopts = getopts(opts,["files"])["files"]
-    for file in addedopts["file"]: fileopts.append(file)
-    if fileopts: opts.append(("files",",".join(fileopts)))
-    genargs = " ".join("-%s '%s'" % (key,value) for (key,value) in genopts)
-    cmd = hadoop + "/bin/hadoop jar " + genargs + " " + dumbojar + " jumbo " + prog
     retval = execute(cmd,opts,hadenv)
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for key,value in opts:
