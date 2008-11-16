@@ -323,5 +323,8 @@ if __name__ == "__main__":
     if sys.argv[1] == "submit": retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "start": retval = start(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "cat": retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
-    else: retval = start(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compat
+    else:
+        print >>sys.stderr,"WARNING: the command 'python -m dumbo <prog>' is " \
+                           "deprecated, use 'python <prog>' instead" 
+        retval = start(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compat
     sys.exit(retval)
