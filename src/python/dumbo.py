@@ -202,9 +202,10 @@ def start(prog,opts):
     else: python = addedopts["python"][0]
     if not addedopts["iteration"]: iter = 0
     else: iter = int(addedopts["iteration"][0])
-    if addedopts["hadoop"]: prog = prog.split("/")[-1]
-    opts.append(("mapper","%s %s map %i" % (python,prog,iter)))
-    opts.append(("reducer","%s %s red %i" % (python,prog,iter)))
+    if not addedopts["hadoop"]: progincmd = prog
+    else: progincmd = prog.split("/")[-1]
+    opts.append(("mapper","%s %s map %i" % (python,progincmd,iter)))
+    opts.append(("reducer","%s %s red %i" % (python,progincmd,iter)))
     if not addedopts["hadoop"]: return startonunix(prog,opts)
     else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
    
