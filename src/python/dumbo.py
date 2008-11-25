@@ -152,7 +152,7 @@ def execute(cmd,opts=[],precmd="",printcmd=True,stdout=sys.stdout,stderr=sys.std
     if precmd: cmd = " ".join((precmd,cmd))
     args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
     if args: cmd = " ".join((cmd,args))
-    if printcmd: print >>stdout,"EXEC:",cmd
+    if printcmd: print >>stderr,"EXEC:",cmd
     return system(cmd,stdout,stderr)
     
 def system(cmd,stdout=sys.stdout,stderr=sys.stderr):
@@ -197,9 +197,10 @@ def start(prog,opts):
     else: python = addedopts["python"][0]
     if not addedopts["iteration"]: iter = 0
     else: iter = int(addedopts["iteration"][0])
-    if addedopts["hadoop"]: prog = prog.split("/")[-1]
-    opts.append(("mapper","%s %s map %i" % (python,prog,iter)))
-    opts.append(("reducer","%s %s red %i" % (python,prog,iter)))
+    if not addedopts["hadoop"]: progincmd = prog
+    else: progincmd = prog.split("/")[-1]
+    opts.append(("mapper","%s %s map %i" % (python,progincmd,iter)))
+    opts.append(("reducer","%s %s red %i" % (python,progincmd,iter)))
     if not addedopts["hadoop"]: return startonunix(prog,opts)
     else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
    
@@ -207,18 +208,22 @@ def startonunix(prog,opts):
     try: opts += configopts("unix",prog,opts)
     except: pass  # ignore
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
-        "delinputs","cmdenv"])
+        "delinputs","cmdenv","pv"])
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
     if (not addedopts["input"]) or (not addedopts["output"]):
         print >>sys.stderr,"ERROR: input or output not specified"
         return 1
-    inputs = " ".join("'%s'" % input for input in addedopts["input"])
+    inputs = " ".join(addedopts["input"])
     output = addedopts["output"][0]
     pyenv = envdef("PYTHONPATH",addedopts["libegg"])
     cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
         for arg in addedopts["cmdenv"])
-    retval = execute("cat %s | %s %s %s | LC_ALL=C sort | %s %s %s > '%s'" % \
-        (inputs,pyenv,cmdenv,mapper,pyenv,cmdenv,reducer,output))
+    if addedopts["pv"] and addedopts["pv"][0] == "yes":
+        cat = "pv -cN source"
+        mpv,spv,rpv = "| pv -cN map ","| pv -cN sort ","| pv -cN reduce "
+    else: cat,mpv,spv,rpv = "cat","","",""
+    retval = execute("%s %s | %s %s %s %s| LC_ALL=C sort %s| %s %s %s %s> '%s'" % \
+        (cat,inputs,pyenv,cmdenv,mapper,mpv,spv,pyenv,cmdenv,reducer,rpv,output))
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for file in addedopts["input"]: execute("rm " + file)
     return retval
