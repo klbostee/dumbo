@@ -94,9 +94,10 @@ class Job:
             if index != 0: 
                 newopts["input"] = "%s-%i" % (scratch,index-1)
                 newopts["delinputs"] = "yes"
-                newopts["inputformat"] = "default"
+                newopts["inputformat"] = "iter"
             if index != len(self.iters)-1:
                 newopts["output"] = "%s-%i" % (scratch,index)
+                newopts["outputformat"] = "iter"
             kwargs["iter"],kwargs["newopts"] = index,newopts
             run(*args,**kwargs)
 
@@ -225,8 +226,10 @@ def startonunix(prog,opts):
 def startonstreaming(prog,opts,hadoop):
     try: opts += configopts("streaming",prog,opts)
     except: pass  # ignore
-    addedopts = getopts(opts,["name","delinputs","libegg","libjar","inputformat",
-        "nummaptasks","numreducetasks","priority","cachefile","cachearchive"])
+    addedopts = getopts(opts,["name","delinputs","libegg","libjar",
+        "inputformat","outputformat","nummaptasks","numreducetasks",
+        "priority","cachefile","cachearchive","codewritable",
+        "inputascode","outputfromcode"])
     opts.append(("file",prog))
     opts.append(("file",sys.argv[0]))
     if not addedopts["name"]:
@@ -246,16 +249,48 @@ def startonstreaming(prog,opts,hadoop):
     if not streamingjar:
         print >>sys.stderr,"ERROR: Streaming jar not found"
         return 1
+    dumbopkg,dumbojar_needed = "org.apache.hadoop.dumbo",False
     inputformat_shortcuts = {
-        "textascode": "TextAsCodeInputFormat", 
-        "sequencefileascode": "SequenceFileAsCodeInputFormat"}
-    if addedopts["inputformat"] and addedopts["inputformat"][0] != 'default':
+        "textascode": dumbopkg + ".TextAsCodeInputFormat", 
+        "sequencefileascode": dumbopkg + ".SequenceFileAsCodeInputFormat"}
+    if addedopts["inputformat"] and addedopts["inputformat"][0] != 'iter':
         inputformat = addedopts["inputformat"][0]
         if inputformat_shortcuts.has_key(inputformat.lower()):
-            inputformat = "org.apache.hadoop.dumbo." + \
-                inputformat_shortcuts[inputformat.lower()]
-            addedopts["libjar"].append(dumbojar)
+            inputformat = inputformat_shortcuts[inputformat.lower()]
+            dumbojar_needed = True
         opts.append(("inputformat",inputformat))
+    outputformat_shortcuts = {
+        "codeastext": dumbopkg + ".CodeAsTextInputFormat",
+        "codeassequencefile": dumbopkg + ".CodeAsSequenceFileInputFormat"}
+    if addedopts["outputformat"] and addedopts["outputformat"][0] != 'iter':
+        outputformat = addedopts["outputformat"][0]
+        if outputformat_shortcuts.has_key(outputformat.lower()):
+            outputformat = outputformat_shortcuts[outputformat.lower()]
+            dumbojar_needed = True
+        opts.append(("outputformat",outputformat))
+    if addedopts["inputascode"] and addedopts["inputascode"][0] == 'yes':
+        opt = getopts(opts,["inputformat"])["inputformat"]
+        if opt: opts.append(("jobconf",
+                             "dumbo.as.code.input.format.class=%s" % opt[0]))
+        opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
+        dumbojar_needed = True
+    if addedopts["outputfromcode"] and addedopts["outputfromcode"][0] == 'yes':
+        opt = getopts(opts,["outputformat"])["outputformat"]
+        if opt: opts.append(("jobconf",
+                             "dumbo.as.code.output.format.class=%s" % opt[0]))
+        opts.append(("outputformat",dumbopkg + ".FromCodeOutputFormat"))
+        dumbojar_needed = True
+    if addedopts["codewritable"] and addedopts["codewritable"][0] == 'yes':
+        opts.append(("jobconf",
+                     "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
+        opts.append(("jobconf",
+                     "mapred.mapoutput.value.class=%s.CodeWritable") % dumbopkg)
+        dumbojar_needed = True
+    if dumbojar_needed:
+        if not dumbojar:
+            print >>sys.stderr,"ERROR: Dumbo jar not found"
+            return 1
+        addedopts["libjar"].append(dumbojar)
     envdef("PYTHONPATH",addedopts["libegg"],"file",opts)
     hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",opts) 
     cmd = hadoop + "/bin/hadoop jar " + streamingjar
