@@ -289,7 +289,7 @@ def startonstreaming(prog,opts,hadoop):
         opts.append(("jobconf",
                      "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
         opts.append(("jobconf",
-                     "mapred.mapoutput.value.class=%s.CodeWritable") % dumbopkg)
+                     "mapred.mapoutput.value.class=%s.CodeWritable" % dumbopkg))
         dumbojar_needed = True
     if dumbojar_needed:
         if not dumbojar:
