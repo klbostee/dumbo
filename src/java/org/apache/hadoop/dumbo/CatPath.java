@@ -29,7 +29,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -41,6 +44,7 @@ public class CatPath extends Configured implements Tool {
 
   public int run(String[] args) throws Exception {
     Configuration conf = getConf();
+    JobConf job = new JobConf(conf);
     
     FileSystem fs = FileSystem.get(conf);
     Path inputPath = new Path(args[1]);
@@ -55,13 +59,28 @@ public class CatPath extends Configured implements Tool {
     }
 
     for (FileStatus fileStatus : inputFiles) {
-      FileSplit split = new FileSplit(fileStatus.getPath(), 0, 
-          fileStatus.getLen()*fileStatus.getBlockSize(), (String[])null);
-      RecordReader<Text,Text> reader = null;
-      if (args[0].toLowerCase().equals("sequencefileascode"))
-        reader = new SequenceFileAsCodeRecordReader(conf, split);
-      else
-        reader = new TextAsCodeRecordReader(conf, split);
+    	FileSplit split = new FileSplit(fileStatus.getPath(), 0, 
+    			fileStatus.getLen()*fileStatus.getBlockSize(), (String[])null);
+      InputFormat<Text,Text> inputformat;
+      if (args[0].toLowerCase().equals("sequencefileasnamedcode")) {
+        inputformat = new SequenceFileAsCodeInputFormat(true);
+      } else if (args[0].toLowerCase().equals("sequencefileascode")) {
+        inputformat = new SequenceFileAsCodeInputFormat(false);
+      } else if (args[0].toLowerCase().equals("textasnamedcode")) {
+        inputformat = new TextAsCodeInputFormat(true);
+      } else if (args[0].toLowerCase().equals("textascode")) {
+        inputformat = new TextAsCodeInputFormat(false);
+      } else {
+      	AsCodeInputFormat asCodeInputformat;
+      	if (args[0].toLowerCase().equals("asnamedcode")) {
+      		asCodeInputformat = new AsCodeInputFormat(true); 
+      	} else {
+      		asCodeInputformat = new AsCodeInputFormat(false); 
+      	}
+      	asCodeInputformat.configure(job);
+      	inputformat = asCodeInputformat;
+      }
+      RecordReader<Text,Text> reader = inputformat.getRecordReader(split, job, Reporter.NULL);
       Text key = new Text(), value = new Text();
       while(reader.next(key, value)) {
         System.out.println(key.toString() + "\t" + value.toString());

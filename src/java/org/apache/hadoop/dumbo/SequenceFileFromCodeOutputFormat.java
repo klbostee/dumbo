@@ -15,23 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.dumbo;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+
 
 /**
- * An input format that converts sequence files to Dumbo code.
+ * An input format that converts Dumbo code to sequence files.
  */
-public class SequenceFileAsCodeInputFormat extends AsCodeInputFormat {
-
-  public SequenceFileAsCodeInputFormat(boolean named) {
-    super(new SequenceFileInputFormat<Text, Text>(), named);
+public class SequenceFileFromCodeOutputFormat extends FromCodeOutputFormat {
+	
+  public SequenceFileFromCodeOutputFormat(boolean named) {
+    super(new SequenceFileOutputFormat());
   }
   
-  public SequenceFileAsCodeInputFormat() {
-    this(false);
-  }
-
 }

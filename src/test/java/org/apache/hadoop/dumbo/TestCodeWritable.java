@@ -52,7 +52,7 @@ public class TestCodeWritable extends TestCase {
   
   public void testNumber() throws Exception {
     testCode("1234");
-    testCode("1234L");
+    testCode("1234L","1234");
     testCode("123.45");
   }
   

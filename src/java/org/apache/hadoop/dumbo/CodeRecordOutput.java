@@ -116,22 +116,22 @@ public class CodeRecordOutput implements RecordOutput {
 
   public void writeDouble(double d, String tag) throws IOException {
     printSeparatorIfNeeded();
-    stream.print(CodeUtils.numberToCode(d));
+    stream.print(CodeUtils.doubleToCode(d));
   }
 
   public void writeFloat(float f, String tag) throws IOException {
     printSeparatorIfNeeded();
-    stream.print(CodeUtils.numberToCode(f));
+    stream.print(CodeUtils.floatToCode(f));
   }
 
   public void writeInt(int i, String tag) throws IOException {
     printSeparatorIfNeeded();
-    stream.print(CodeUtils.numberToCode(i));
+    stream.print(CodeUtils.intToCode(i));
   }
 
   public void writeLong(long l, String tag) throws IOException {
     printSeparatorIfNeeded();
-    stream.print(CodeUtils.numberToCode(l));
+    stream.print(CodeUtils.longToCode(l));
   }
 
   public void writeString(String s, String tag) throws IOException {

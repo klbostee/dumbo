@@ -18,20 +18,15 @@
 
 package org.apache.hadoop.dumbo;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.TextOutputFormat;
 
 /**
- * An input format that converts sequence files to Dumbo code.
+ * An input format that converts Dumbo code to text.
  */
-public class SequenceFileAsCodeInputFormat extends AsCodeInputFormat {
+public class TextFromCodeOutputFormat extends FromCodeOutputFormat {
 
-  public SequenceFileAsCodeInputFormat(boolean named) {
-    super(new SequenceFileInputFormat<Text, Text>(), named);
-  }
-  
-  public SequenceFileAsCodeInputFormat() {
-    this(false);
-  }
-
+	public TextFromCodeOutputFormat() {
+		super(new TextOutputFormat<Writable, Writable>());
+	}
 }

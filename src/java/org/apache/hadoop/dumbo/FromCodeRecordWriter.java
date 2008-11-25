@@ -18,20 +18,32 @@
 
 package org.apache.hadoop.dumbo;
 
+import java.io.IOException;
+
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.RecordWriter;
+import org.apache.hadoop.mapred.Reporter;
 
 /**
- * An input format that converts sequence files to Dumbo code.
+ * A record writer that converts from Dumbo code.
  */
-public class SequenceFileAsCodeInputFormat extends AsCodeInputFormat {
+public class FromCodeRecordWriter implements RecordWriter<Text, Text> {
 
-  public SequenceFileAsCodeInputFormat(boolean named) {
-    super(new SequenceFileInputFormat<Text, Text>(), named);
-  }
-  
-  public SequenceFileAsCodeInputFormat() {
-    this(false);
-  }
+	private RecordWriter<Writable, Writable> realRecordWriter;
+	
+	public FromCodeRecordWriter(RecordWriter<Writable, Writable> realRecordWriter) {
+		this.realRecordWriter = realRecordWriter;
+	}
+
+	public void close(Reporter reporter) throws IOException {
+		realRecordWriter.close(reporter);
+	}
+
+	public void write(Text key, Text value) throws IOException {
+		Writable convertedKey = CodeUtils.codeToWritable(key.toString());
+		Writable convertedValue = CodeUtils.codeToWritable(value.toString());
+		realRecordWriter.write(convertedKey, convertedValue);
+	}
 
 }

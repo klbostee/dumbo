@@ -18,43 +18,19 @@
 
 package org.apache.hadoop.dumbo;
 
-import java.io.IOException;
-
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobConfigurable;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TextInputFormat;
 
 /**
  * An input format that converts text to Dumbo code.
  */
-public class TextAsCodeInputFormat extends FileInputFormat<Text, Text>
-implements JobConfigurable {
+public class TextAsCodeInputFormat extends AsCodeInputFormat {
 
-  private CompressionCodecFactory compressionCodecs = null;
-
-  public void configure(JobConf conf) {
-    compressionCodecs = new CompressionCodecFactory(conf);
-  }
-
-  @Override
-  protected boolean isSplitable(FileSystem fs, Path file) {
-    return compressionCodecs.getCodec(file) == null;
-  }
-
-  public RecordReader<Text, Text> getRecordReader(
-      InputSplit genericSplit, JobConf job,
-      Reporter reporter)
-      throws IOException {
-
-    reporter.setStatus(genericSplit.toString());
-    return new TextAsCodeRecordReader(job, (FileSplit) genericSplit);
-  }
+	public TextAsCodeInputFormat(boolean named) {
+		super(new TextInputFormat(), named);
+	}
+	
+	public TextAsCodeInputFormat() {
+		this(false);
+	}
+	
 }

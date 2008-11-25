@@ -21,10 +21,8 @@ package org.apache.hadoop.dumbo;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
+import org.apache.hadoop.dumbo.CodeUtils.CodeType;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -35,10 +33,6 @@ import org.apache.hadoop.io.WritableUtils;
 public class CodeWritable implements WritableComparable {
 
   private String code = null;
-  
-  private static enum FieldType {
-    NONE, BOOLEAN, INTEGER, LONG, FLOAT, STRING, TUPLE, LIST, DICTIONARY
-  }
   
   public CodeWritable(String code) {
     if (code != null) this.code = code.trim();
@@ -56,94 +50,71 @@ public class CodeWritable implements WritableComparable {
     return code;
   }
   
-  public void write(DataOutput out) throws IOException {
-    char first = code.charAt(0);
-    if (first == 'N') {
-      out.writeByte(FieldType.NONE.ordinal());
-    } else if (first == 'T' || first == 'F') {
-      out.writeByte(FieldType.BOOLEAN.ordinal());
-      out.writeBoolean(first == 'T');
-    } else if (first == '\'' || first == '"') {
-      out.writeByte(FieldType.STRING.ordinal());
-      WritableUtils.writeString(out, code.substring(1, code.length()-1));
-    } else if (first == '(') {
-      out.writeByte(FieldType.TUPLE.ordinal());
-      writeSequence(out);
-    } else if (first == '[') {
-      out.writeByte(FieldType.LIST.ordinal());
-      writeSequence(out);
-    } else if (first == '{') {
-      out.writeByte(FieldType.DICTIONARY.ordinal());
-      // TODO: make this more efficient
-      WritableUtils.writeString(out, code);
-    } else if (code.contains(".")) {
-      out.writeByte(FieldType.FLOAT.ordinal());
-      out.writeFloat(Float.parseFloat(code));
-    } else if (code.charAt(code.length()-1) == 'L') {
-      out.writeByte(FieldType.LONG.ordinal());
-      WritableUtils.writeVLong(out, Long.parseLong(code.substring(0, code.length()-1)));
-    } else {
-      out.writeByte(FieldType.INTEGER.ordinal());
-      WritableUtils.writeVInt(out, Integer.parseInt(code));
-    }
+  public CodeType getType() {
+  	return CodeUtils.deriveType(code);
   }
   
-  private void writeSequence(DataOutput out) throws IOException {
-    List<CodeWritable> items = new ArrayList<CodeWritable>();
-    boolean inStr = false;
-    int prevIndex = 1; 
-    for (int i = 1; i < code.length()-1; i++) {
-      char c = code.charAt(i);
-      if (c == '\'' || c == '"') inStr = !inStr;
-      else if (!inStr && c == ',') {
-        items.add(new CodeWritable(code.substring(prevIndex, i).trim()));
-        prevIndex = i+1;
-      }
+  public void write(DataOutput out) throws IOException {
+    CodeType type = CodeUtils.deriveType(code);
+    out.writeByte(type.ordinal());
+    if (type == CodeType.STRING) {
+    	WritableUtils.writeString(out, CodeUtils.codeToString(code));
+    } else if (type == CodeType.BOOLEAN) {
+      out.writeBoolean(CodeUtils.codeToBoolean(code));
+    } else if (type == CodeType.INTEGER) {
+      WritableUtils.writeVInt(out, CodeUtils.codeToInt(code));
+    } else if (type == CodeType.LONG) {
+      WritableUtils.writeVLong(out, CodeUtils.codeToLong(code));
+    } else if (type == CodeType.FLOAT) {
+      out.writeFloat(CodeUtils.codeToFloat(code));
+    } else if (type == CodeType.TUPLE) {
+      writeSequence(out, CodeUtils.codesFromTuple(code));
+    } else if (type == CodeType.LIST) {
+      writeSequence(out, CodeUtils.codesFromList(code));
+    } else if (type != CodeType.NULL) {
+      WritableUtils.writeString(out, code); // write code itself
     }
-    items.add(new CodeWritable(code.substring(prevIndex, code.length()-1).trim()));
-    WritableUtils.writeVInt(out, items.size());
-    Iterator<CodeWritable> it = items.iterator();
-    while (it.hasNext()) it.next().write(out);
   }
   
   public void readFields(DataInput in) throws IOException {
     int type = in.readByte();
-    if (type == FieldType.NONE.ordinal()) {
-      code = "None";
-    } else if (type == FieldType.BOOLEAN.ordinal()) {
-      if (in.readBoolean()) code = "True";
-      else code = "False";
-    } else if (type == FieldType.STRING.ordinal()) {
-      code = "'" + WritableUtils.readString(in) + "'";
-    } else if (type == FieldType.INTEGER.ordinal()) {
-      code = new Integer(WritableUtils.readVInt(in)).toString();
-    } else if (type == FieldType.LONG.ordinal()) {
-      code = new Long(WritableUtils.readVLong(in)).toString() + "L";
-    } else if (type == FieldType.FLOAT.ordinal()) {
+    if (type == CodeType.STRING.ordinal()) {
+      code = CodeUtils.stringToCode(WritableUtils.readString(in));
+    } else if (type == CodeType.BOOLEAN.ordinal()) {
+      code = CodeUtils.booleanToCode(in.readBoolean());
+    } else if (type == CodeType.INTEGER.ordinal()) {
+      code = CodeUtils.intToCode(WritableUtils.readVInt(in));
+    } else if (type == CodeType.LONG.ordinal()) {
+      code = CodeUtils.longToCode(WritableUtils.readVLong(in));
+    } else if (type == CodeType.FLOAT.ordinal()) {
       code = new Float(in.readFloat()).toString();
-    } else if (type == FieldType.TUPLE.ordinal()){
-      readSequence(in, "(", ")");
-    } else if (type == FieldType.LIST.ordinal()){
-      readSequence(in, "[", "]");
+    } else if (type == CodeType.TUPLE.ordinal()){
+      code = CodeUtils.codesToTuple(readSequence(in));
+    } else if (type == CodeType.LIST.ordinal()){
+      code = CodeUtils.codesToList(readSequence(in));
+    } else if (type == CodeType.NULL.ordinal()) {
+      code = CodeUtils.NULL_CODE;
     } else {
       code = WritableUtils.readString(in);
     }
   }
 
-  private void readSequence(DataInput in, String begin, String end) throws IOException {
-    int length = WritableUtils.readVInt(in);
-    StringBuffer buf = new StringBuffer(begin);
-    for (int i = 0; i < length-1; i++) {
-      CodeWritable cw = new CodeWritable();
-      cw.readFields(in);
-      buf.append(cw.get());
-      buf.append(",");
+  private static void writeSequence(DataOutput out, String[] codes) throws IOException {
+    WritableUtils.writeVInt(out, codes.length);
+    for (String subcode : codes) { 
+    	(new CodeWritable(subcode)).write(out);
     }
-    CodeWritable cw = new CodeWritable();
-    cw.readFields(in);
-    buf.append(cw.get());
-    buf.append(end);
-    code = buf.toString();
+  }
+  
+  private static String[] readSequence(DataInput in) throws IOException {
+    int length = WritableUtils.readVInt(in);
+    String[] codes = new String[length];
+    for (int i = 0; i < length; i++) {
+    	CodeWritable cw = new CodeWritable();
+    	cw.readFields(in);
+    	codes[i] = cw.get();
+    }
+    return codes;
   }
   
   public int compareTo(Object obj) {

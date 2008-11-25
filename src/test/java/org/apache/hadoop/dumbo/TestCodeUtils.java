@@ -46,9 +46,9 @@ public class TestCodeUtils extends TestCase {
 
   public void testNumber() {
     assertTrue("Generated code for number wrong.",
-        "1234".equals(CodeUtils.numberToCode(1234)));
+        "1234".equals(CodeUtils.intToCode(1234)));
     assertTrue("Generated code for number wrong.",
-        "1.23".equals(CodeUtils.numberToCode(1.23)));
+        "1.23".equals(CodeUtils.doubleToCode(1.23)));
   }
 
   public void testString() {
