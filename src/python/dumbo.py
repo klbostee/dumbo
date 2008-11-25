@@ -54,7 +54,7 @@ def run(mapper,reducer=None,combiner=None,
         if iterarg == iter:
             if sys.argv[1].startswith("map"):
                 if mapconf: mapconf()
-                if hasattr(mapper,"coded") and (mapper.coded or code_in): 
+                if (hasattr(mapper,"coded") and mapper.coded) or code_in: 
                     inputs = loadcode(line[:-1] for line in sys.stdin)
                 else: inputs = loadtext(line[:-1] for line in sys.stdin)
                 outputs = itermap(inputs,mapper)
@@ -66,7 +66,7 @@ def run(mapper,reducer=None,combiner=None,
                 if redconf: redconf()
                 inputs = loadcode(line[:-1] for line in sys.stdin)
                 outputs = iterreduce(inputs,reducer)
-                if hasattr(reducer,"coded") and (reducer.coded or code_out): 
+                if (hasattr(reducer,"coded") and reducer.coded) or code_out: 
                     outputs = dumpcode(outputs)
                 else: outputs = dumptext(outputs)
                 if redclose: redclose()
@@ -74,11 +74,6 @@ def run(mapper,reducer=None,combiner=None,
             for output in outputs: print "\t".join(output)
     else:
         opts = parseargs(sys.argv[1:]) + [("iteration","%i" % iter)]
-        if hasattr(mapper,"coded") and (mapper.coded or code_in):
-            opts.append(("codein","yes"))
-        if hasattr(reducer,"coded") and (reducer.coded or code_out):
-            opts.append(("codeout","yes"))
-        if combiner: opts.append(("combine","yes"))
         key,delindexes = None,[]
         for index,(key,value) in enumerate(opts):
             if newopts.has_key(key): delindexes.append(index)
@@ -196,8 +191,7 @@ def start(prog,opts):
         def dummysystem(*args,**kwargs): return 0
         global system
         system = dummysystem  # not very clean, but it's easy and it works...
-    addedopts = getopts(opts,["python","iteration","hadoop",
-                              "codein","codeout","combine"])
+    addedopts = getopts(opts,["python","iteration","hadoop"])
     if not addedopts["python"]: python = "python"
     else: python = addedopts["python"][0]
     if not addedopts["iteration"]: iter = 0
