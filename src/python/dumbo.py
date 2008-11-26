@@ -234,7 +234,7 @@ def startonstreaming(prog,opts,hadoop):
     addedopts = getopts(opts,["name","delinputs","libegg","libjar",
         "inputformat","outputformat","nummaptasks","numreducetasks",
         "priority","cachefile","cachearchive","codewritable",
-        "inputascode","outputfromcode"])
+        "inputascode","outputfromcode","namedcode"])
     opts.append(("file",prog))
     opts.append(("file",sys.argv[0]))
     if not addedopts["name"]:
@@ -290,6 +290,10 @@ def startonstreaming(prog,opts,hadoop):
                      "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
         opts.append(("jobconf",
                      "mapred.mapoutput.value.class=%s.CodeWritable" % dumbopkg))
+        opt = getopts(opts,["mapper"])["mapper"]
+        opts.append(("jobconf",
+                     "dumbo.code.writable.map.streamprocessor=%s" % opt[0]))
+        opts.append(("mapper",dumbopkg + ".CodeWritablePipeMapper"))
         dumbojar_needed = True
     if dumbojar_needed:
         if not dumbojar:
