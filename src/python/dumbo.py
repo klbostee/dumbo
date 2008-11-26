@@ -295,6 +295,8 @@ def startonstreaming(prog,opts,hadoop):
                      "dumbo.code.writable.map.streamprocessor=%s" % opt[0]))
         opts.append(("mapper",dumbopkg + ".CodeWritablePipeMapper"))
         dumbojar_needed = True
+    if addedopts["namedcode"] and addedopts["namedcode"][0] == 'yes':
+        opts.append(("jobconf", "dumbo.as.named.code=true"))
     if dumbojar_needed:
         if not dumbojar:
             print >>sys.stderr,"ERROR: Dumbo jar not found"
