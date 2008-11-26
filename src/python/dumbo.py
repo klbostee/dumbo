@@ -273,7 +273,7 @@ def startonstreaming(prog,opts,hadoop):
         "sequencefileascode": dumbopkg + ".SequenceFileAsCodeInputFormat",
         "binaryascode": dumbopkg + ".SequenceFileAsCodeInputFormat"}
     inputformat_shortcuts.update(configopts("inputformats",prog))
-    if addedopts["inputformat"] and addedopts["inputformat"][0] != 'iter':
+    if addedopts["inputformat"] and addedopts["inputformat"][0]:
         inputformat = addedopts["inputformat"][0]
         if inputformat_shortcuts.has_key(inputformat.lower()):
             inputformat = inputformat_shortcuts[inputformat.lower()]
@@ -287,7 +287,7 @@ def startonstreaming(prog,opts,hadoop):
         "sequencefilefromcode": dumbopkg + ".SequenceFileFromCodeOutputFormat",
         "binaryfromcode": dumbopkg + ".SequenceFileFromCodeOutputFormat"}
     outputformat_shortcuts.update(configopts("outputformats",prog))
-    if addedopts["outputformat"] and addedopts["outputformat"][0] != 'iter':
+    if addedopts["outputformat"] and addedopts["outputformat"][0]:
         outputformat = addedopts["outputformat"][0]
         if outputformat_shortcuts.has_key(outputformat.lower()):
             outputformat = outputformat_shortcuts[outputformat.lower()]
