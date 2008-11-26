@@ -104,7 +104,7 @@ public abstract class CodeUtils {
 
   
   public static String codesToTuple(String[] codes) {
-    return combineSubcodes(codes, "(", ")");
+    return combineSubcodes(codes, "(", ")", ",");
   }
   
   public static String codesToTuple(String code1, String code2) {
@@ -112,22 +112,30 @@ public abstract class CodeUtils {
   }
   
   public static String codesToList(String[] codes) {
-    return combineSubcodes(codes, "[", "]");
+    return combineSubcodes(codes, "[", "]", ",");
   }
   
   public static String codesToList(String code1, String code2) {
     return "[" + code1 + "," + code2 + "]";
   }
   
-  private static String combineSubcodes(String[] codes, String begin, String end) {
+  public static String codesToDictionary(String[] codes) {
+    return combineSubcodes(codes, "{", "}", ":", ",");
+  }
+  
+  private static String combineSubcodes(String[] codes, String begin, String end, String sep1, String sep2) {
     StringBuffer buf = new StringBuffer(begin);
     for (int i = 0; i < codes.length-1; i++) {
       buf.append(codes[i]);
-      buf.append(",");
+      buf.append(i % 2 == 0 ? sep1 : sep2);
     }
     buf.append(codes[codes.length-1]);
     buf.append(end);
     return buf.toString();
+  }
+  
+  private static String combineSubcodes(String[] codes, String begin, String end, String sep) {
+  	return combineSubcodes(codes, begin, end, sep, sep);
   }
   
   public static String[] codesFromTuple(String code) {
@@ -138,6 +146,10 @@ public abstract class CodeUtils {
   	return findSubcodes(code);
   }
   
+  public static String[] codesFromDictionary(String code) {
+  	return findSubcodes(code);
+  }
+  
   private static String[] findSubcodes(String code) {
   	List<String> codes = new ArrayList<String>();
     boolean inStr = false;
@@ -145,7 +157,7 @@ public abstract class CodeUtils {
     for (int i = 1; i < code.length()-1; i++) {
       char c = code.charAt(i);
       if (c == '\'' || c == '"') inStr = !inStr;
-      else if (!inStr && c == ',') {
+      else if (!inStr && (c == ',' || c == ':')) {
         codes.add(code.substring(prevIndex, i).trim());
         prevIndex = i+1;
       }
@@ -194,7 +206,9 @@ public abstract class CodeUtils {
   public static String writableToCode(Writable w) {
     // DoubleWritable not handled (yet) because it is not available
     // in older Hadoop versions...
-  	if (w instanceof BooleanWritable) {
+  	if (w instanceof CodeWritable) {
+  		return ((CodeWritable)w).get();
+  	} else if (w instanceof BooleanWritable) {
   		return booleanToCode(((BooleanWritable)w).get());
   	} else if (w instanceof IntWritable)  {
   		return intToCode(((IntWritable)w).get());
@@ -210,24 +224,11 @@ public abstract class CodeUtils {
   		return stringToCode(((Text)w).toString());
   	} else if (w instanceof Record) {
   		return recordToCode((Record)w);
-  	} else if (w instanceof CodeWritable) {
-  		return ((CodeWritable)w).get();
   	} else return stringToCode(w.toString());
   }
 
-  public static Writable codeToWritable(String code) {
-  	CodeType type = deriveType(code);
-  	if (type == CodeType.BOOLEAN) {
-  		return new BooleanWritable(codeToBoolean(code));
-  	} else if (type == CodeType.INTEGER) {
-  		return new VIntWritable(codeToInt(code));
-  	} else if (type == CodeType.LONG) {
-  		return new VLongWritable(codeToLong(code));
-  	} else if (type == CodeType.FLOAT) {
-  		return new FloatWritable(codeToFloat(code));
-  	} else if (type == CodeType.STRING) {
-  		return new Text(codeToString(code));
-  	} else return new CodeWritable(code);
+  public static CodeWritable codeToWritable(String code) {
+  	return new CodeWritable(code);
   }
   
 }

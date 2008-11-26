@@ -58,7 +58,7 @@ public class CodeWritable implements WritableComparable {
     CodeType type = CodeUtils.deriveType(code);
     out.writeByte(type.ordinal());
     if (type == CodeType.STRING) {
-    	WritableUtils.writeString(out, CodeUtils.codeToString(code));
+    	writeString(out, CodeUtils.codeToString(code));
     } else if (type == CodeType.BOOLEAN) {
       out.writeBoolean(CodeUtils.codeToBoolean(code));
     } else if (type == CodeType.INTEGER) {
@@ -71,15 +71,17 @@ public class CodeWritable implements WritableComparable {
       writeSequence(out, CodeUtils.codesFromTuple(code));
     } else if (type == CodeType.LIST) {
       writeSequence(out, CodeUtils.codesFromList(code));
+    } else if (type == CodeType.DICTIONARY) {
+      writeSequence(out, CodeUtils.codesFromDictionary(code));
     } else if (type != CodeType.NULL) {
-      WritableUtils.writeString(out, code); // write code itself
+      writeString(out, code); // write code itself
     }
   }
   
   public void readFields(DataInput in) throws IOException {
     int type = in.readByte();
     if (type == CodeType.STRING.ordinal()) {
-      code = CodeUtils.stringToCode(WritableUtils.readString(in));
+      code = CodeUtils.stringToCode(readString(in));
     } else if (type == CodeType.BOOLEAN.ordinal()) {
       code = CodeUtils.booleanToCode(in.readBoolean());
     } else if (type == CodeType.INTEGER.ordinal()) {
@@ -88,15 +90,31 @@ public class CodeWritable implements WritableComparable {
       code = CodeUtils.longToCode(WritableUtils.readVLong(in));
     } else if (type == CodeType.FLOAT.ordinal()) {
       code = new Float(in.readFloat()).toString();
-    } else if (type == CodeType.TUPLE.ordinal()){
+    } else if (type == CodeType.TUPLE.ordinal()) {
       code = CodeUtils.codesToTuple(readSequence(in));
     } else if (type == CodeType.LIST.ordinal()){
       code = CodeUtils.codesToList(readSequence(in));
+    } else if (type == CodeType.DICTIONARY.ordinal()){
+      code = CodeUtils.codesToDictionary(readSequence(in));
     } else if (type == CodeType.NULL.ordinal()) {
       code = CodeUtils.NULL_CODE;
     } else {
-      code = WritableUtils.readString(in);
+      code = readString(in);
     }
+  }
+  
+  private static void writeString(DataOutput out, String str) throws IOException {
+  	byte[] buffer = str.getBytes("UTF-8");
+    int length = buffer.length;
+    WritableUtils.writeVInt(out, length);
+    out.write(buffer, 0, length);
+  }
+  
+  private static String readString(DataInput in) throws IOException {
+  	int length = WritableUtils.readVInt(in);
+    byte[] buffer = new byte[length];
+    in.readFully(buffer, 0, length);
+    return new String(buffer, "UTF-8");
   }
 
   private static void writeSequence(DataOutput out, String[] codes) throws IOException {

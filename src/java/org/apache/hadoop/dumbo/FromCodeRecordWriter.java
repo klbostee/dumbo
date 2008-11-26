@@ -21,7 +21,6 @@ package org.apache.hadoop.dumbo;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 
@@ -30,9 +29,9 @@ import org.apache.hadoop.mapred.Reporter;
  */
 public class FromCodeRecordWriter implements RecordWriter<Text, Text> {
 
-	private RecordWriter<Writable, Writable> realRecordWriter;
+	private RecordWriter<CodeWritable, CodeWritable> realRecordWriter;
 	
-	public FromCodeRecordWriter(RecordWriter<Writable, Writable> realRecordWriter) {
+	public FromCodeRecordWriter(RecordWriter<CodeWritable, CodeWritable> realRecordWriter) {
 		this.realRecordWriter = realRecordWriter;
 	}
 
@@ -41,8 +40,8 @@ public class FromCodeRecordWriter implements RecordWriter<Text, Text> {
 	}
 
 	public void write(Text key, Text value) throws IOException {
-		Writable convertedKey = CodeUtils.codeToWritable(key.toString());
-		Writable convertedValue = CodeUtils.codeToWritable(value.toString());
+		CodeWritable convertedKey = CodeUtils.codeToWritable(key.toString());
+		CodeWritable convertedValue = CodeUtils.codeToWritable(value.toString());
 		realRecordWriter.write(convertedKey, convertedValue);
 	}
 

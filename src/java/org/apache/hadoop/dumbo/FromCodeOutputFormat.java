@@ -65,6 +65,11 @@ public class FromCodeOutputFormat implements OutputFormat<Text,Text>, JobConfigu
 				throw new RuntimeException(e);
 			}
 		}
+		// explicitely set the mapoutput classes to make sure that the normal output classes can be different:
+		job.setMapOutputKeyClass(job.getMapOutputKeyClass());
+		job.setMapOutputValueClass(job.getMapOutputValueClass());
+		job.setOutputKeyClass(CodeWritable.class);
+		job.setOutputValueClass(CodeWritable.class);
 	}
 	
 	

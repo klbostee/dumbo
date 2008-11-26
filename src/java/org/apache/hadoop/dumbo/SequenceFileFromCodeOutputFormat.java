@@ -25,7 +25,7 @@ import org.apache.hadoop.mapred.SequenceFileOutputFormat;
  */
 public class SequenceFileFromCodeOutputFormat extends FromCodeOutputFormat {
 	
-  public SequenceFileFromCodeOutputFormat(boolean named) {
+  public SequenceFileFromCodeOutputFormat() {
     super(new SequenceFileOutputFormat());
   }
   

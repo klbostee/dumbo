@@ -24,6 +24,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.io.Text;
+
 import junit.framework.TestCase;
 
 /**
@@ -57,6 +59,7 @@ public class TestCodeWritable extends TestCase {
   }
   
   public void testString() throws Exception {
+  	testCode("''");
     testCode("'random text'");
   }
   
@@ -82,9 +85,30 @@ public class TestCodeWritable extends TestCase {
     String after = cw.get();
     System.out.println("before: " + before + ", after: " + after);
     assertTrue("Wrong code deserialized for \"" + before + "\".", goal.equals(after));
+    compareWithText(before);
   }
   
   private static void testCode(String before) throws IOException {
     testCode(before, before);
+  }
+  
+  private static void compareWithText(String code) throws IOException {
+  	ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    DataOutputStream dout = new DataOutputStream(bout);
+    CodeWritable cw = new CodeWritable(code);
+    cw.write(dout);
+    dout.close();
+    bout.close();
+    int cwlen = bout.toByteArray().length;
+    bout = new ByteArrayOutputStream();
+    dout = new DataOutputStream(bout);
+    Text text = new Text(code);
+    text.write(dout);
+    dout.close();
+    bout.close();
+    int textlen = bout.toByteArray().length;
+    System.out.println("Number of bytes for \"" + code + "\" when using CodeWritable = " + cwlen);
+    System.out.println("Number of bytes for \"" + code + "\" when using Text = " + textlen);
+    assertTrue("CodeWritable does not require less bytes than Text for \"" + code + "\"", cwlen < textlen);
   }
 }
