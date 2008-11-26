@@ -168,9 +168,10 @@ def findjar(hadoop,name):
     try: return jardir + "/" + filter(regex.match,os.listdir(jardir))[-1]
     except: return None
 
-def envdef(varname,files,optname=None,opts=None,commasep=False):
+def envdef(varname,files,optname=None,opts=None,commasep=False,shortcuts={}):
     path,optvals="",[]
     for file in files:
+        if shortcuts.has_key(file.lower()): file = shortcuts[file.lower()]
         path += file + ":"
         optvals.append(file)
     if optname and optvals:
@@ -208,14 +209,15 @@ def startonunix(prog,opts):
     try: opts += configopts("unix",prog,opts)
     except: pass  # ignore
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
-        "delinputs","cmdenv","pv"])
+                              "delinputs","cmdenv","pv"])
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
     if (not addedopts["input"]) or (not addedopts["output"]):
         print >>sys.stderr,"ERROR: input or output not specified"
         return 1
     inputs = " ".join(addedopts["input"])
     output = addedopts["output"][0]
-    pyenv = envdef("PYTHONPATH",addedopts["libegg"])
+    pyenv = envdef("PYTHONPATH",addedopts["libegg"],
+                   shortcuts=configopts("eggs",prog))
     cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
         for arg in addedopts["cmdenv"])
     if addedopts["pv"] and addedopts["pv"][0] == "yes":
@@ -304,8 +306,10 @@ def startonstreaming(prog,opts,hadoop):
             print >>sys.stderr,"ERROR: Dumbo jar not found"
             return 1
         addedopts["libjar"].append(dumbojar)
-    envdef("PYTHONPATH",addedopts["libegg"],"file",opts)
-    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",opts) 
+    envdef("PYTHONPATH",addedopts["libegg"],"file",opts,
+           shortcuts=configopts("eggs",prog))
+    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",opts,
+                    shortcuts=configopts("jars",prog)) 
     cmd = hadoop + "/bin/hadoop jar " + streamingjar
     retval = execute(cmd,opts,hadenv)
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
