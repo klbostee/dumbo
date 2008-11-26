@@ -94,10 +94,18 @@ class Job:
             if index != 0: 
                 newopts["input"] = "%s-%i" % (scratch,index-1)
                 newopts["delinputs"] = "yes"
-                newopts["inputformat"] = "iter"
+                mapper,code_in = args[0],False
+                if kwargs.has_key("code_in"): code_in = kwargs["code_in"]
+                if (hasattr(mapper,"coded") and mapper.coded) or code_in: 
+                    newopts["inputformat"] = "binaryascode"
+                else: newopts["inputformat"] = "binary"
             if index != len(self.iters)-1:
                 newopts["output"] = "%s-%i" % (scratch,index)
-                newopts["outputformat"] = "iter"
+                reducer,code_out = args[1],False
+                if kwargs.has_key("code_out"): code_out = kwargs["code_out"]
+                if (hasattr(reducer,"coded") and reducer.coded) or code_out: 
+                    newopts["outputformat"] = "binaryfromcode"
+                else: newopts["outputformat"] = "binary"
             kwargs["iter"],kwargs["newopts"] = index,newopts
             run(*args,**kwargs)
 
@@ -258,8 +266,12 @@ def startonstreaming(prog,opts,hadoop):
         return 1
     dumbopkg,dumbojar_needed = "org.apache.hadoop.dumbo",False
     inputformat_shortcuts = {
+        "text": "org.apache.hadoop.mapred.TextInputFormat",
+        "sequencefile": "org.apache.hadoop.mapred.SequenceFileInputFormat",
+        "binary": "org.apache.hadoop.mapred.SequenceFileInputFormat",
         "textascode": dumbopkg + ".TextAsCodeInputFormat", 
-        "sequencefileascode": dumbopkg + ".SequenceFileAsCodeInputFormat"}
+        "sequencefileascode": dumbopkg + ".SequenceFileAsCodeInputFormat",
+        "binaryascode": dumbopkg + ".SequenceFileAsCodeInputFormat"}
     inputformat_shortcuts.update(configopts("inputformats",prog))
     if addedopts["inputformat"] and addedopts["inputformat"][0] != 'iter':
         inputformat = addedopts["inputformat"][0]
@@ -268,8 +280,12 @@ def startonstreaming(prog,opts,hadoop):
             dumbojar_needed = True
         opts.append(("inputformat",inputformat))
     outputformat_shortcuts = {
-        "codeastext": dumbopkg + ".CodeAsTextInputFormat",
-        "codeassequencefile": dumbopkg + ".CodeAsSequenceFileInputFormat"}
+        "text": "org.apache.hadoop.mapred.TextOutputFormat",
+        "sequencefile": "org.apache.hadoop.mapred.SequenceFileOutputFormat",
+        "binary": "org.apache.hadoop.mapred.SequenceFileOutputFormat",
+        "textfromcode": dumbopkg + ".TextFromCodeOutputFormat",
+        "sequencefilefromcode": dumbopkg + ".SequenceFileFromCodeOutputFormat",
+        "binaryfromcode": dumbopkg + ".SequenceFileFromCodeOutputFormat"}
     outputformat_shortcuts.update(configopts("outputformats",prog))
     if addedopts["outputformat"] and addedopts["outputformat"][0] != 'iter':
         outputformat = addedopts["outputformat"][0]
