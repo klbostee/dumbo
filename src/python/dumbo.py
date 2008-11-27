@@ -146,8 +146,9 @@ def getopts(opts,keys,delete=True):
 
 def configopts(section,prog,opts=[]):
     from ConfigParser import SafeConfigParser,NoSectionError
-    defaults = {'prog': prog.split("/")[-1].split(".py",1)[0],
-                'user': os.environ["USER"],"pwd": os.environ["PWD"]}
+    defaults = {'prog': prog.split("/")[-1].split(".py",1)[0]}
+    try: defaults.update([('user',os.environ["USER"]),('pwd',os.environ["PWD"])])
+    except KeyError: pass
     for key,value in opts: defaults[key] = value
     parser = SafeConfigParser(defaults)
     parser.read(["/etc/dumbo.conf",os.environ["HOME"]+"/.dumborc"])
