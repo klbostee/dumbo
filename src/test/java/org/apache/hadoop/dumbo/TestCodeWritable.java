@@ -68,12 +68,35 @@ public class TestCodeWritable extends TestCase {
     testCode("( 1, 2, 3, 'random' )","(1,2,3,'random')");
     testCode("[1,2,3,'random']");
     testCode("{'1':1,'2':2}");
+    testCode("('test','paul\\'s, mine, and yours')");
+    testCode("('test',\"paul's, mine, and yours\")","('test','paul\\'s, mine, and yours')");
   }
   
-  private static void testCode(String before, String goal) throws IOException {
+  public void testRest() throws Exception {
+  	testCode("MyClass(1,'string')", false);
+  }
+  
+  private static void testCode(String code, String goal, boolean strict) throws IOException {
+    testSerialization(code, goal);
+    compareWithText(code, strict);
+  }
+  
+  private static void testCode(String code, String goal) throws IOException {
+  	testCode(code, goal, true);
+  }
+  	
+  private static void testCode(String code, boolean strict) throws IOException {
+    testCode(code, code, strict);
+  }
+  
+  private static void testCode(String code) throws IOException {
+    testCode(code, code, true);
+  }
+  
+  private static void testSerialization(String code, String goal) throws IOException {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     DataOutputStream dout = new DataOutputStream(bout);
-    CodeWritable cw = new CodeWritable(before);
+    CodeWritable cw = new CodeWritable(code);
     cw.write(dout);
     dout.close();
     bout.close();
@@ -83,16 +106,11 @@ public class TestCodeWritable extends TestCase {
     din.close();
     bin.close();
     String after = cw.get();
-    System.out.println("before: " + before + ", after: " + after);
-    assertTrue("Wrong code deserialized for \"" + before + "\".", goal.equals(after));
-    compareWithText(before);
+    System.out.println("before: " + code + ", after: " + after);
+    assertTrue("Wrong code deserialized for \"" + code + "\".", goal.equals(after));
   }
   
-  private static void testCode(String before) throws IOException {
-    testCode(before, before);
-  }
-  
-  private static void compareWithText(String code) throws IOException {
+  private static void compareWithText(String code, boolean strict) throws IOException {
   	ByteArrayOutputStream bout = new ByteArrayOutputStream();
     DataOutputStream dout = new DataOutputStream(bout);
     CodeWritable cw = new CodeWritable(code);
@@ -109,6 +127,9 @@ public class TestCodeWritable extends TestCase {
     int textlen = bout.toByteArray().length;
     System.out.println("Number of bytes for \"" + code + "\" when using CodeWritable = " + cwlen);
     System.out.println("Number of bytes for \"" + code + "\" when using Text = " + textlen);
-    assertTrue("CodeWritable does not require less bytes than Text for \"" + code + "\"", cwlen < textlen);
+    if (strict)
+    	assertTrue("CodeWritable does not require less bytes than Text for \"" + code + "\"", cwlen < textlen);
+    else
+    	assertTrue("Text requires at least 2 bytes less than CodeWritable for \"" + code + "\"", cwlen - 1 <= textlen);
   }
 }

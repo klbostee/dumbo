@@ -55,27 +55,27 @@ public class CodeWritable implements WritableComparable {
   }
   
   public void write(DataOutput out) throws IOException {
-    CodeType type = CodeUtils.deriveType(code);
-    out.writeByte(type.ordinal());
-    if (type == CodeType.STRING) {
-    	writeString(out, CodeUtils.codeToString(code));
-    } else if (type == CodeType.BOOLEAN) {
-      out.writeBoolean(CodeUtils.codeToBoolean(code));
-    } else if (type == CodeType.INTEGER) {
-      WritableUtils.writeVInt(out, CodeUtils.codeToInt(code));
-    } else if (type == CodeType.LONG) {
-      WritableUtils.writeVLong(out, CodeUtils.codeToLong(code));
-    } else if (type == CodeType.FLOAT) {
-      out.writeFloat(CodeUtils.codeToFloat(code));
-    } else if (type == CodeType.TUPLE) {
-      writeSequence(out, CodeUtils.codesFromTuple(code));
-    } else if (type == CodeType.LIST) {
-      writeSequence(out, CodeUtils.codesFromList(code));
-    } else if (type == CodeType.DICTIONARY) {
-      writeSequence(out, CodeUtils.codesFromDictionary(code));
-    } else if (type != CodeType.NULL) {
-      writeString(out, code); // write code itself
-    }
+  	CodeType type = CodeUtils.deriveType(code);
+  	out.writeByte(type.ordinal());
+  	if (type == CodeType.STRING) {
+  		writeString(out, CodeUtils.codeToString(code));
+  	} else if (type == CodeType.BOOLEAN) {
+  		out.writeBoolean(CodeUtils.codeToBoolean(code));
+  	} else if (type == CodeType.INTEGER) {
+  		WritableUtils.writeVInt(out, CodeUtils.codeToInt(code));
+  	} else if (type == CodeType.LONG) {
+  		WritableUtils.writeVLong(out, CodeUtils.codeToLong(code));
+  	} else if (type == CodeType.FLOAT) {
+  		out.writeFloat(CodeUtils.codeToFloat(code));
+  	} else if (type == CodeType.TUPLE) {
+  		writeSequence(out, CodeUtils.codesFromTuple(code));
+  	} else if (type == CodeType.LIST) {
+  		writeSequence(out, CodeUtils.codesFromList(code));
+  	} else if (type == CodeType.DICTIONARY) {
+  		writeSequence(out, CodeUtils.codesFromDictionary(code));
+  	} else if (type != CodeType.NULL) {
+  		writeString(out, code); // write code itself
+  	}
   }
   
   public void readFields(DataInput in) throws IOException {

@@ -38,7 +38,7 @@ import org.apache.hadoop.record.Record;
 public abstract class CodeUtils {
 	
 	public static enum CodeType {
-    NULL, BOOLEAN, INTEGER, LONG, FLOAT, STRING, TUPLE, LIST, DICTIONARY
+    NULL, BOOLEAN, INTEGER, LONG, FLOAT, STRING, TUPLE, LIST, DICTIONARY, OTHER
   }
 
   private CodeUtils() {}
@@ -153,14 +153,19 @@ public abstract class CodeUtils {
   private static String[] findSubcodes(String code) {
   	List<String> codes = new ArrayList<String>();
     boolean inStr = false;
+    char strChar = 0, prevChar = 0;
     int prevIndex = 1; 
     for (int i = 1; i < code.length()-1; i++) {
       char c = code.charAt(i);
-      if (c == '\'' || c == '"') inStr = !inStr;
+      if ((c == '\'' || c == '"') && (!inStr || c == strChar) && prevChar != '\\') {
+      	inStr = !inStr;
+      	strChar = c;
+      }
       else if (!inStr && (c == ',' || c == ':')) {
         codes.add(code.substring(prevIndex, i).trim());
         prevIndex = i+1;
       }
+      prevChar = c;
     }
     codes.add(code.substring(prevIndex, code.length()-1).trim());
     String[] codesArray = new String[codes.size()];
@@ -187,9 +192,9 @@ public abstract class CodeUtils {
       return CodeType.FLOAT;
     } else if (code.charAt(code.length()-1) == 'L') {
       return CodeType.LONG;
-    } else {
+    } else if (Character.isDigit(code.charAt(0))) {
       return CodeType.INTEGER;
-    }
+    } else return CodeType.OTHER;
   }
   
   
