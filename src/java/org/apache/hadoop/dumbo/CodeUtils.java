@@ -36,8 +36,8 @@ import org.apache.hadoop.record.Record;
  * This class provides functions that generate and parse Dumbo code.
  */
 public abstract class CodeUtils {
-	
-	public static enum CodeType {
+
+  public static enum CodeType {
     NULL, BOOLEAN, INTEGER, LONG, FLOAT, STRING, TUPLE, LIST, DICTIONARY, OTHER
   }
 
@@ -48,41 +48,45 @@ public abstract class CodeUtils {
   public static String booleanToCode(boolean b) {
     return b ? "True" : "False";
   }
-  
+
   public static boolean codeToBoolean(String code) {
-  	return code.charAt(0) == 'T';
+    return code.charAt(0) == 'T';
   }
-  
+
   public static String intToCode(int i) {
-  	return numberToCode(i);
+    return numberToCode(i);
   }
-  
+
   public static String longToCode(long l) {
-  	return numberToCode(l);
+    return numberToCode(l);
   }
-  
+
   public static String floatToCode(float f) {
-  	return numberToCode(f);
+    return numberToCode(f);
   }
-  
+
   public static String doubleToCode(double d) {
-  	return numberToCode(d);
+    return numberToCode(d);
   }
-  
+
   private static String numberToCode(Number n) {
     return n.toString();
   }
-  
+
   public static int codeToInt(String code) {
-  	return Integer.parseInt(code);
+    return Integer.parseInt(code);
   }
-  
+
   public static long codeToLong(String code) {
-  	return Long.parseLong(code.substring(0, code.length()-1));
+    int lastIndex = code.length() - 1;
+    if (code.charAt(lastIndex) == 'L')
+      return Long.parseLong(code.substring(0, code.length()-1));
+    else
+      return Long.parseLong(code);
   }
-  
+
   public static float codeToFloat(String code) {
-  	return Float.parseFloat(code);
+    return Float.parseFloat(code);
   }
 
   public static String stringToCode(String s) {
@@ -93,36 +97,36 @@ public abstract class CodeUtils {
     .replace("'", "\\'")
     + "'";
   }
-  
+
   public static String codeToString(String code) {
-  	return code.substring(1, code.length()-1)
-  	.replace("\\n", "\n")
-  	.replace("\\r", "\r")
-  	.replace("\\t", "\t")
-  	.replace("\\'", "'");
+    return code.substring(1, code.length()-1)
+    .replace("\\n", "\n")
+    .replace("\\r", "\r")
+    .replace("\\t", "\t")
+    .replace("\\'", "'");
   }
 
-  
+
   public static String codesToTuple(String[] codes) {
     return combineSubcodes(codes, "(", ")", ",");
   }
-  
+
   public static String codesToTuple(String code1, String code2) {
     return "(" + code1 + "," + code2 + ")";
   }
-  
+
   public static String codesToList(String[] codes) {
     return combineSubcodes(codes, "[", "]", ",");
   }
-  
+
   public static String codesToList(String code1, String code2) {
     return "[" + code1 + "," + code2 + "]";
   }
-  
+
   public static String codesToDictionary(String[] codes) {
     return combineSubcodes(codes, "{", "}", ":", ",");
   }
-  
+
   private static String combineSubcodes(String[] codes, String begin, String end, String sep1, String sep2) {
     StringBuffer buf = new StringBuffer(begin);
     for (int i = 0; i < codes.length-1; i++) {
@@ -133,33 +137,33 @@ public abstract class CodeUtils {
     buf.append(end);
     return buf.toString();
   }
-  
+
   private static String combineSubcodes(String[] codes, String begin, String end, String sep) {
-  	return combineSubcodes(codes, begin, end, sep, sep);
+    return combineSubcodes(codes, begin, end, sep, sep);
   }
-  
+
   public static String[] codesFromTuple(String code) {
-  	return findSubcodes(code);
+    return findSubcodes(code);
   }
-  
+
   public static String[] codesFromList(String code) {
-  	return findSubcodes(code);
+    return findSubcodes(code);
   }
-  
+
   public static String[] codesFromDictionary(String code) {
-  	return findSubcodes(code);
+    return findSubcodes(code);
   }
-  
+
   private static String[] findSubcodes(String code) {
-  	List<String> codes = new ArrayList<String>();
+    List<String> codes = new ArrayList<String>();
     boolean inStr = false;
     char strChar = 0, prevChar = 0;
     int prevIndex = 1; 
     for (int i = 1; i < code.length()-1; i++) {
       char c = code.charAt(i);
       if ((c == '\'' || c == '"') && (!inStr || c == strChar) && prevChar != '\\') {
-      	inStr = !inStr;
-      	strChar = c;
+        inStr = !inStr;
+        strChar = c;
       }
       else if (!inStr && (c == ',' || c == ':')) {
         codes.add(code.substring(prevIndex, i).trim());
@@ -172,10 +176,10 @@ public abstract class CodeUtils {
     codes.toArray(codesArray);
     return codesArray;
   }
-  
-  
+
+
   public static CodeType deriveType(String code) {
-  	char first = code.charAt(0);
+    char first = code.charAt(0);
     if (code.equals(NULL_CODE)) {
       return CodeType.NULL;
     } else if (code.equals("True") || code.equals("False")) {
@@ -196,8 +200,8 @@ public abstract class CodeUtils {
       return CodeType.INTEGER;
     } else return CodeType.OTHER;
   }
-  
-  
+
+
   public static String recordToCode(Record r) {
     try {
       ByteArrayOutputStream s = new ByteArrayOutputStream();
@@ -211,29 +215,29 @@ public abstract class CodeUtils {
   public static String writableToCode(Writable w) {
     // DoubleWritable not handled (yet) because it is not available
     // in older Hadoop versions...
-  	if (w instanceof CodeWritable) {
-  		return ((CodeWritable)w).get();
-  	} else if (w instanceof BooleanWritable) {
-  		return booleanToCode(((BooleanWritable)w).get());
-  	} else if (w instanceof IntWritable)  {
-  		return intToCode(((IntWritable)w).get());
-  	} else if (w instanceof VIntWritable)  {
-  		return intToCode(((VIntWritable)w).get());
-  	} else if (w instanceof LongWritable) {
-  		return longToCode(((LongWritable)w).get());
-   	} else if (w instanceof VLongWritable) {
-  		return longToCode(((VLongWritable)w).get());
-  	} else if (w instanceof FloatWritable) {
-  		return floatToCode(((FloatWritable)w).get());
-  	} else if (w instanceof Text) {
-  		return stringToCode(((Text)w).toString());
-  	} else if (w instanceof Record) {
-  		return recordToCode((Record)w);
-  	} else return stringToCode(w.toString());
+    if (w instanceof CodeWritable) {
+      return ((CodeWritable)w).get();
+    } else if (w instanceof BooleanWritable) {
+      return booleanToCode(((BooleanWritable)w).get());
+    } else if (w instanceof IntWritable)  {
+      return intToCode(((IntWritable)w).get());
+    } else if (w instanceof VIntWritable)  {
+      return intToCode(((VIntWritable)w).get());
+    } else if (w instanceof LongWritable) {
+      return longToCode(((LongWritable)w).get());
+    } else if (w instanceof VLongWritable) {
+      return longToCode(((VLongWritable)w).get());
+    } else if (w instanceof FloatWritable) {
+      return floatToCode(((FloatWritable)w).get());
+    } else if (w instanceof Text) {
+      return stringToCode(((Text)w).toString());
+    } else if (w instanceof Record) {
+      return recordToCode((Record)w);
+    } else return stringToCode(w.toString());
   }
 
   public static CodeWritable codeToWritable(String code) {
-  	return new CodeWritable(code);
+    return new CodeWritable(code);
   }
   
 }

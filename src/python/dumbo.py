@@ -2,6 +2,15 @@ import sys,types,os,random,re,types,subprocess,urllib
 from itertools import groupby
 from operator import itemgetter
 
+def identitymapper(key,value):
+    yield key,value
+
+def identityreducer(key,values):
+    for value in values: yield key,value
+    
+def sumreducer(key,values):
+    yield key,sum(values)
+
 def itermap(data,mapfunc):
     for key,value in data: 
         for output in mapfunc(key,value): yield output
@@ -29,11 +38,14 @@ def dumptext(outputs):
         del newoutput[:]
 
 def loadtext(inputs):
-    for input in inputs: yield (None,input)
+    offset = 0
+    for input in inputs: 
+        yield (offset,input)
+        offset += len(input)
 
 def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,mapclose=None,redclose=None,
-        code_in=False,code_out=False,iter=0,newopts={}):
+        iter=0,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
         try:
             regex = re.compile(".*\.egg")
@@ -52,28 +64,21 @@ def run(mapper,reducer=None,combiner=None,
         iterarg = 0  # default value
         if len(sys.argv) > 2: iterarg = int(sys.argv[2])
         if iterarg == iter:
+            inputs = loadcode(line[:-1] for line in sys.stdin)
             if sys.argv[1].startswith("map"):
                 if mapconf: mapconf()
-                if (hasattr(mapper,"coded") and mapper.coded) or code_in: 
-                    inputs = loadcode(line[:-1] for line in sys.stdin)
-                else: inputs = loadtext(line[:-1] for line in sys.stdin)
                 outputs = itermap(inputs,mapper)
                 if combiner: outputs = iterreduce(sorted(outputs),combiner)
-                if reducer or code_out: outputs = dumpcode(outputs)
-                else: outputs = dumptext(outputs)
                 if mapclose: mapclose()
             elif reducer: 
                 if redconf: redconf()
-                inputs = loadcode(line[:-1] for line in sys.stdin)
                 outputs = iterreduce(inputs,reducer)
-                if (hasattr(reducer,"coded") and reducer.coded) or code_out: 
-                    outputs = dumpcode(outputs)
-                else: outputs = dumptext(outputs)
                 if redclose: redclose()
-            else: outputs = dumptext((line[:-1],) for line in sys.stdin)
-            for output in outputs: print "\t".join(output)
+            else: outputs = inputs
+            for output in dumpcode(outputs): print "\t".join(output)
     else:
         opts = parseargs(sys.argv[1:]) + [("iteration","%i" % iter)]
+        if not reducer: newopts["numreducetasks"] = "0"
         key,delindexes = None,[]
         for index,(key,value) in enumerate(opts):
             if newopts.has_key(key): delindexes.append(index)
@@ -90,22 +95,15 @@ class Job:
     def run(self):
         scratch = "dumbo-tmp-%i" % random.randint(0,sys.maxint)
         for index,(args,kwargs) in enumerate(self.iters):
-            newopts = {}
+            newopts = {"name": "%s (%s/%s)" % (sys.argv[0].split("/")[-1],
+                                               index+1,len(self.iters))}
             if index != 0: 
                 newopts["input"] = "%s-%i" % (scratch,index-1)
                 newopts["delinputs"] = "yes"
-                mapper,code_in = args[0],False
-                if kwargs.has_key("code_in"): code_in = kwargs["code_in"]
-                if (hasattr(mapper,"coded") and mapper.coded) or code_in: 
-                    newopts["inputformat"] = "binaryascode"
-                else: newopts["inputformat"] = "binary"
+                newopts["inputformat"] = "sequencefile"
             if index != len(self.iters)-1:
                 newopts["output"] = "%s-%i" % (scratch,index)
-                reducer,code_out = args[1],False
-                if kwargs.has_key("code_out"): code_out = kwargs["code_out"]
-                if (hasattr(reducer,"coded") and reducer.coded) or code_out: 
-                    newopts["outputformat"] = "binaryfromcode"
-                else: newopts["outputformat"] = "binary"
+                newopts["outputformat"] = "sequencefile"
             kwargs["iter"],kwargs["newopts"] = index,newopts
             run(*args,**kwargs)
 
@@ -213,13 +211,14 @@ def start(prog,opts):
     else: progincmd = prog.split("/")[-1]
     opts.append(("mapper","%s %s map %i" % (python,progincmd,iter)))
     opts.append(("reducer","%s %s red %i" % (python,progincmd,iter)))
-    if not addedopts["hadoop"]: return startonunix(prog,opts)
+    if not addedopts["hadoop"]: return startonunix(prog,opts,python)
     else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
    
-def startonunix(prog,opts):
+def startonunix(prog,opts,python):
     opts += configopts("unix",prog,opts)
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
-                              "delinputs","cmdenv","pv"])
+                              "delinputs","cmdenv","pv","addfilename",
+                              "inputformat","outputformat","numreducetasks"])
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
     if (not addedopts["input"]) or (not addedopts["output"]):
         print >>sys.stderr,"ERROR: input or output not specified"
@@ -234,79 +233,80 @@ def startonunix(prog,opts):
         cat = "pv -cN source"
         mpv,spv,rpv = "| pv -cN map ","| pv -cN sort ","| pv -cN reduce "
     else: cat,mpv,spv,rpv = "cat","","",""
-    retval = execute("%s %s | %s %s %s %s| LC_ALL=C sort %s| %s %s %s %s> '%s'" % \
-        (cat,inputs,pyenv,cmdenv,mapper,mpv,spv,pyenv,cmdenv,reducer,rpv,output))
+    encodepipe = ""
+    if addedopts["inputformat"] and addedopts["inputformat"][0] == "text":
+        encodepipe = "| %s -m dumbo encodepipe " % python
+        if addedopts["addfilename"] and addedopts["addfilename"][0] == 'yes':
+            print >>sys.stderr,"WARNING: the added filenames might be incorrect" 
+            encodepipe += "-addfilename %s " % addedopts["input"][0]
+    if addedopts["numreducetasks"] and addedopts["numreducetasks"][0] == "0":
+        retval = execute("%s %s %s| %s %s %s %s > '%s'" % \
+                         (cat,inputs,encodepipe,pyenv,cmdenv,mapper,mpv,output))
+    else:
+        retval = execute("%s %s %s| %s %s %s %s| LC_ALL=C " \
+                         "sort %s| %s %s %s %s> '%s'" % \
+                         (cat,inputs,encodepipe,pyenv,cmdenv,mapper,mpv,
+                          spv,pyenv,cmdenv,reducer,rpv,output))
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for file in addedopts["input"]: execute("rm " + file)
     return retval
 
 def startonstreaming(prog,opts,hadoop):
     opts += configopts("streaming",prog,opts)
-    addedopts = getopts(opts,["name","delinputs","libegg","libjar",
-        "inputformat","outputformat","nummaptasks","numreducetasks",
-        "priority","cachefile","cachearchive","codewritable",
-        "inputascode","outputfromcode","namedcode"])
     opts.append(("file",prog))
     opts.append(("file",sys.argv[0]))
+    addedopts = getopts(opts,["name","delinputs","libegg","libjar",
+        "inputformat","outputformat","nummaptasks","numreducetasks",
+        "priority","cachefile","cachearchive","codewritable","addfilename"])
+    streamingjar,dumbojar = findjar(hadoop,"streaming"),findjar(hadoop,"dumbo")
+    if not streamingjar:
+        print >>sys.stderr,"ERROR: Streaming jar not found"
+        return 1
+    if not dumbojar:
+        print >>sys.stderr,"ERROR: Dumbo jar not found"
+        return 1
+    addedopts["libjar"].append(dumbojar)
+    dumbopkg = "org.apache.hadoop.dumbo"
     if not addedopts["name"]:
         opts.append(("jobconf","mapred.job.name=" + prog.split("/")[-1]))
     else: opts.append(("jobconf","mapred.job.name=%s" % addedopts["name"][0]))
     if addedopts["nummaptasks"]: opts.append(("jobconf",
         "mapred.map.tasks=%s" % addedopts["nummaptasks"][0]))
-    if addedopts["numreducetasks"]: opts.append(("numReduceTasks",
-        addedopts["numreducetasks"][0]))
+    if addedopts["numreducetasks"]: 
+        numreducetasks = int(addedopts["numreducetasks"][0])
+        opts.append(("numReduceTasks",str(numreducetasks)))
+        if numreducetasks == 0:
+            opts.append(("jobconf",
+                         "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
+            opts.append(("jobconf",
+                         "mapred.mapoutput.value.class=%s.CodeWritable" % dumbopkg))
+            addedopts["codewritable"] = ['no']
     if addedopts["priority"]: opts.append(("jobconf",
         "mapred.job.priority=%s" % addedopts["priority"][0]))
     if addedopts["cachefile"]: opts.append(("cacheFile",
         addedopts["cachefile"][0]))
     if addedopts["cachearchive"]: opts.append(("cacheArchive",
         addedopts["cachearchive"][0]))
-    streamingjar,dumbojar = findjar(hadoop,"streaming"),findjar(hadoop,"dumbo")
-    if not streamingjar:
-        print >>sys.stderr,"ERROR: Streaming jar not found"
-        return 1
-    dumbopkg,dumbojar_needed = "org.apache.hadoop.dumbo",False
+    if not addedopts["inputformat"]: addedopts["inputformat"] = ["sequencefile"] 
     inputformat_shortcuts = {
-        "text": "org.apache.hadoop.mapred.TextInputFormat",
-        "sequencefile": "org.apache.hadoop.mapred.SequenceFileInputFormat",
-        "binary": "org.apache.hadoop.mapred.SequenceFileInputFormat",
-        "textascode": dumbopkg + ".TextAsCodeInputFormat", 
-        "sequencefileascode": dumbopkg + ".SequenceFileAsCodeInputFormat",
-        "binaryascode": dumbopkg + ".SequenceFileAsCodeInputFormat"}
+        "text": "org.apache.hadoop.mapred.TextInputFormat", 
+        "sequencefile": "org.apache.hadoop.mapred.SequenceFileInputFormat"}
     inputformat_shortcuts.update(configopts("inputformats",prog))
-    if addedopts["inputformat"] and addedopts["inputformat"][0]:
-        inputformat = addedopts["inputformat"][0]
-        if inputformat_shortcuts.has_key(inputformat.lower()):
-            inputformat = inputformat_shortcuts[inputformat.lower()]
-            dumbojar_needed = True
-        opts.append(("inputformat",inputformat))
+    inputformat = addedopts["inputformat"][0]
+    if inputformat_shortcuts.has_key(inputformat.lower()):
+        inputformat = inputformat_shortcuts[inputformat.lower()]
+    opts.append(("jobconf","dumbo.as.code.input.format.class=" + inputformat))
+    opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
+    if not addedopts["outputformat"]: addedopts["outputformat"] = ["sequencefile"] 
     outputformat_shortcuts = {
-        "text": "org.apache.hadoop.mapred.TextOutputFormat",
-        "sequencefile": "org.apache.hadoop.mapred.SequenceFileOutputFormat",
-        "binary": "org.apache.hadoop.mapred.SequenceFileOutputFormat",
-        "textfromcode": dumbopkg + ".TextFromCodeOutputFormat",
-        "sequencefilefromcode": dumbopkg + ".SequenceFileFromCodeOutputFormat",
-        "binaryfromcode": dumbopkg + ".SequenceFileFromCodeOutputFormat"}
+        "sequencefile": "org.apache.hadoop.mapred.SequenceFileOutputFormat"}
     outputformat_shortcuts.update(configopts("outputformats",prog))
-    if addedopts["outputformat"] and addedopts["outputformat"][0]:
-        outputformat = addedopts["outputformat"][0]
-        if outputformat_shortcuts.has_key(outputformat.lower()):
-            outputformat = outputformat_shortcuts[outputformat.lower()]
-            dumbojar_needed = True
-        opts.append(("outputformat",outputformat))
-    if addedopts["inputascode"] and addedopts["inputascode"][0] == 'yes':
-        opt = getopts(opts,["inputformat"])["inputformat"]
-        if opt: opts.append(("jobconf",
-                             "dumbo.as.code.input.format.class=" + opt[0]))
-        opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
-        dumbojar_needed = True
-    if addedopts["outputfromcode"] and addedopts["outputfromcode"][0] == 'yes':
-        opt = getopts(opts,["outputformat"])["outputformat"]
-        if opt: opts.append(("jobconf",
-                             "dumbo.as.code.output.format.class=" + opt[0]))
-        opts.append(("outputformat",dumbopkg + ".FromCodeOutputFormat"))
-        dumbojar_needed = True
-    if addedopts["codewritable"] and addedopts["codewritable"][0] == 'yes':
+    outputformat = addedopts["outputformat"][0]
+    if outputformat_shortcuts.has_key(outputformat.lower()):
+        outputformat = outputformat_shortcuts[outputformat.lower()]
+    opts.append(("jobconf","dumbo.from.code.output.format.class=" + outputformat))
+    opts.append(("outputformat",dumbopkg + ".FromCodeOutputFormat"))
+    if not (addedopts["codewritable"] and addedopts["codewritable"][0] == 'no'):
         opts.append(("jobconf",
                      "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
         opts.append(("jobconf",
@@ -317,14 +317,8 @@ def startonstreaming(prog,opts,hadoop):
         opts.append(("mapper",dumbopkg + ".CodeWritableMapper"))
         opts.append(("jobconf","dumbo.code.writable.map.class=" \
                      "org.apache.hadoop.streaming.PipeMapper"))
-        dumbojar_needed = True
-    if addedopts["namedcode"] and addedopts["namedcode"][0] == 'yes':
+    if addedopts["addfilename"] and addedopts["addfilename"][0] == 'yes':
         opts.append(("jobconf", "dumbo.as.named.code=true"))
-    if dumbojar_needed:
-        if not dumbojar:
-            print >>sys.stderr,"ERROR: Dumbo jar not found"
-            return 1
-        addedopts["libjar"].append(dumbojar)
     envdef("PYTHONPATH",addedopts["libegg"],"file",opts,
            shortcuts=dict(configopts("eggs",prog)))
     hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",opts,
@@ -339,15 +333,13 @@ def startonstreaming(prog,opts,hadoop):
 
 def cat(path,opts):
     addedopts = getopts(opts,["hadoop","type","libjar"])
-    if not addedopts["hadoop"]:
-        print >>sys.stderr,"ERROR: Hadoop dir not specified"
-        return 1
+    if not addedopts["hadoop"]: return decodepipe(opts + [("path",path)])
     hadoop = addedopts["hadoop"][0]
     dumbojar = findjar(hadoop,"dumbo")
     if not dumbojar:
         print >>sys.stderr,"ERROR: Dumbo jar not found"
         return 1
-    if not addedopts["type"]: type = "text"
+    if not addedopts["type"]: type = "sequencefile"
     else: type = addedopts["type"][0]
     hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"])
     try:
@@ -362,16 +354,45 @@ def cat(path,opts):
     except IOError: pass  # ignore
     return 0
 
+def encodepipe(opts=[]):
+    addedopts,filename = getopts(opts,["addfilename","path"]),None
+    if addedopts["addfilename"]: filename = addedopts["addfilename"][0]
+    if addedopts["path"]: file = open(addedopts["path"][0])
+    else: file = sys.stdin
+    outputs = loadtext(line[:-1] for line in file)
+    if filename: outputs = (((filename,key),value) for key,value in outputs)
+    for output in dumpcode(outputs): print "\t".join(output)
+    file.close()
+    return 0
+    
+def decodepipe(opts=[]):
+    addedopts = getopts(opts,["path"])
+    if addedopts["path"]: file = open(addedopts["path"][0])
+    else: file = sys.stdin
+    outputs = loadcode(line[:-1] for line in file)
+    for output in dumptext(outputs): print "\t".join(output)
+    file.close()
+    return 0
+
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         print "Usages:"
         print "  python -m dumbo submit <python program> [<options>]"
         print "  python -m dumbo start <python program> [<options>]"
         print "  python -m dumbo cat <path> [<options>]"
+        print "  python -m dumbo encodepipe [<options>]"
+        print "  python -m dumbo decodepipe [<options>]"
         sys.exit(1)
-    if sys.argv[1] == "submit": retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
-    elif sys.argv[1] == "start": retval = start(sys.argv[2],parseargs(sys.argv[2:]))
-    elif sys.argv[1] == "cat": retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
+    if sys.argv[1] == "submit":
+        retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "start":
+        retval = start(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "cat":
+        retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "encodepipe":
+        retval = encodepipe(parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "decodepipe":
+        retval = decodepipe(parseargs(sys.argv[2:]))
     else:
         print >>sys.stderr,"WARNING: the command 'python -m dumbo <prog>' is " \
                            "deprecated, use 'python <prog>' instead" 
