@@ -15,7 +15,7 @@ def mapper1(key,value):
     for word in value.split(): yield word,1
 
 def mapper2(key,value):
-    for letter in value.split()[0]: yield letter,1
+    for letter in key: yield letter,1
 
 def reducer1(key,values):
     count = sum(values)
