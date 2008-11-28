@@ -31,7 +31,7 @@ USAGE
 python examples/wordcount.py -hadoop /path/to/hadoop \
 -file excludes.txt -input brian.txt -output brian-wc
 
-/usr/local/hadoop/bin/hadoop dfs -getmerge brian-wc brian-wc.txt
+python -m dumbo cat brian-wc > brian-wc.txt
 
 
 MORE INFO
