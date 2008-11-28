@@ -79,7 +79,7 @@ def run(mapper,reducer=None,combiner=None,
             if newopts.has_key(key): delindexes.append(index)
         for delindex in reversed(delindexes): del opts[delindex]
         opts += newopts.iteritems()
-        retval = execute("python -m dumbo start '%s'" % sys.argv[0],opts,printcmd=False)
+        retval = execute("python -m oldumbo start '%s'" % sys.argv[0],opts,printcmd=False)
         if retval == 127:
             print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
         if retval != 0: sys.exit(retval)
@@ -88,7 +88,7 @@ class Job:
     def __init__(self): self.iters = []
     def additer(self,*args,**kwargs): self.iters.append((args,kwargs))
     def run(self):
-        scratch = "dumbo-tmp-%i" % random.randint(0,sys.maxint)
+        scratch = "oldumbo-tmp-%i" % random.randint(0,sys.maxint)
         for index,(args,kwargs) in enumerate(self.iters):
             newopts = {}
             if index != 0: 
@@ -151,7 +151,7 @@ def configopts(section,prog,opts=[]):
     except KeyError: pass
     for key,value in opts: defaults[key] = value
     parser = SafeConfigParser(defaults)
-    parser.read(["/etc/dumbo.conf",os.environ["HOME"]+"/.dumborc"])
+    parser.read(["/etc/oldumbo.conf",os.environ["HOME"]+"/.oldumborc"])
     results,excludes = [],set(defaults.iterkeys())
     try: 
         for key,value in parser.items(section):
@@ -365,15 +365,15 @@ def cat(path,opts):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print "Usages:"
-        print "  python -m dumbo submit <python program> [<options>]"
-        print "  python -m dumbo start <python program> [<options>]"
-        print "  python -m dumbo cat <path> [<options>]"
+        print "  python -m oldumbo submit <python program> [<options>]"
+        print "  python -m oldumbo start <python program> [<options>]"
+        print "  python -m oldumbo cat <path> [<options>]"
         sys.exit(1)
     if sys.argv[1] == "submit": retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "start": retval = start(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "cat": retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
     else:
-        print >>sys.stderr,"WARNING: the command 'python -m dumbo <prog>' is " \
+        print >>sys.stderr,"WARNING: the command 'python -m oldumbo <prog>' is " \
                            "deprecated, use 'python <prog>' instead" 
         retval = start(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compat
     sys.exit(retval)
