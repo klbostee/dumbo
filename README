@@ -3,9 +3,8 @@ DESCRIPTION
 
 Originally, Dumbo was just a simple Python module that made writing 
 and running Streaming programs very easy, but now it also consists 
-of some helper code in Java (although it can still be used without 
-the Java code). More generally, Dumbo can be considered to be a 
-convenient Python API for writing MapReduce programs.
+of some helper code in Java. More generally, Dumbo can be considered
+to be a convenient Python API for writing MapReduce programs.
 
 
 INSTALLATION
