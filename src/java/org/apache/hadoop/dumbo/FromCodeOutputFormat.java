@@ -34,59 +34,59 @@ import org.apache.hadoop.util.Progressable;
  */
 public class FromCodeOutputFormat implements OutputFormat<Text,Text>, JobConfigurable {
 
-	private OutputFormat realOutputFormat = null;
-	
-	public FromCodeOutputFormat(OutputFormat realOutputFormat) {
-		this.realOutputFormat = realOutputFormat;
-	}
-	
-	public FromCodeOutputFormat() {
-		this(null);
-	}
-	
-	public void configure(JobConf job) {
-		if (realOutputFormat == null) {
-			Class<? extends OutputFormat> realOutputFormatClass
-				= job.getClass("dumbo.from.code.output.format.class", TextOutputFormat.class, OutputFormat.class);
-			try {
-				realOutputFormat = realOutputFormatClass.newInstance();
-				for (Class interface_ : realOutputFormatClass.getInterfaces()) {
-					if (interface_.equals(JobConfigurable.class)) {
-						JobConfigurable jc = (JobConfigurable) realOutputFormat;
-						jc.configure(job);
-						break;
-					}
-				}
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-				throw new RuntimeException(e);
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-				throw new RuntimeException(e);
-			}
-		}
-		// explicitely set the mapoutput classes to make sure that the normal output classes can be different:
-		job.setMapOutputKeyClass(job.getMapOutputKeyClass());
-		job.setMapOutputValueClass(job.getMapOutputValueClass());
-		job.setOutputKeyClass(CodeWritable.class);
-		job.setOutputValueClass(CodeWritable.class);
-	}
-	
-	
-	public void checkOutputSpecs(FileSystem ignored, JobConf job)
-			throws IOException {
-		realOutputFormat.checkOutputSpecs(ignored, job);
-	}
+  private OutputFormat realOutputFormat = null;
 
-	@SuppressWarnings("unchecked")
-	private RecordWriter<Text,Text> createRecordWriter(FileSystem ignored, JobConf job,
-			String name, Progressable progress) throws IOException {
-		return new FromCodeRecordWriter(realOutputFormat.getRecordWriter(ignored, job, name, progress));
-	}
-	
-	public RecordWriter<Text,Text> getRecordWriter(FileSystem ignored, JobConf job,
-			String name, Progressable progress) throws IOException {
-		return createRecordWriter(ignored, job, name, progress);
-	}
+  public FromCodeOutputFormat(OutputFormat realOutputFormat) {
+    this.realOutputFormat = realOutputFormat;
+  }
+
+  public FromCodeOutputFormat() {
+    this(null);
+  }
+
+  public void configure(JobConf job) {
+    if (realOutputFormat == null) {
+      Class<? extends OutputFormat> realOutputFormatClass
+      = job.getClass("dumbo.from.code.output.format.class", TextOutputFormat.class, OutputFormat.class);
+      try {
+        realOutputFormat = realOutputFormatClass.newInstance();
+        for (Class interface_ : realOutputFormatClass.getInterfaces()) {
+          if (interface_.equals(JobConfigurable.class)) {
+            JobConfigurable jc = (JobConfigurable) realOutputFormat;
+            jc.configure(job);
+            break;
+          }
+        }
+      } catch (InstantiationException e) {
+        e.printStackTrace();
+        throw new RuntimeException(e);
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+        throw new RuntimeException(e);
+      }
+    }
+    // explicitely set the mapoutput classes to make sure that the normal output classes can be different:
+    job.setMapOutputKeyClass(job.getMapOutputKeyClass());
+    job.setMapOutputValueClass(job.getMapOutputValueClass());
+    job.setOutputKeyClass(CodeWritable.class);
+    job.setOutputValueClass(CodeWritable.class);
+  }
+
+
+  public void checkOutputSpecs(FileSystem ignored, JobConf job)
+  throws IOException {
+    realOutputFormat.checkOutputSpecs(ignored, job);
+  }
+
+  @SuppressWarnings("unchecked")
+  private RecordWriter<Text,Text> createRecordWriter(FileSystem ignored, JobConf job,
+      String name, Progressable progress) throws IOException {
+    return new FromCodeRecordWriter(realOutputFormat.getRecordWriter(ignored, job, name, progress));
+  }
+
+  public RecordWriter<Text,Text> getRecordWriter(FileSystem ignored, JobConf job,
+      String name, Progressable progress) throws IOException {
+    return createRecordWriter(ignored, job, name, progress);
+  }
 
 }

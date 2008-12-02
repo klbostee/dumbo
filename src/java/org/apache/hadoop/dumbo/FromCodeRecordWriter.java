@@ -29,20 +29,20 @@ import org.apache.hadoop.mapred.Reporter;
  */
 public class FromCodeRecordWriter implements RecordWriter<Text, Text> {
 
-	private RecordWriter<CodeWritable, CodeWritable> realRecordWriter;
-	
-	public FromCodeRecordWriter(RecordWriter<CodeWritable, CodeWritable> realRecordWriter) {
-		this.realRecordWriter = realRecordWriter;
-	}
+  private RecordWriter<CodeWritable, CodeWritable> realRecordWriter;
 
-	public void close(Reporter reporter) throws IOException {
-		realRecordWriter.close(reporter);
-	}
+  public FromCodeRecordWriter(RecordWriter<CodeWritable, CodeWritable> realRecordWriter) {
+    this.realRecordWriter = realRecordWriter;
+  }
 
-	public void write(Text key, Text value) throws IOException {
-		CodeWritable convertedKey = CodeUtils.codeToWritable(key.toString());
-		CodeWritable convertedValue = CodeUtils.codeToWritable(value.toString());
-		realRecordWriter.write(convertedKey, convertedValue);
-	}
+  public void close(Reporter reporter) throws IOException {
+    realRecordWriter.close(reporter);
+  }
+
+  public void write(Text key, Text value) throws IOException {
+    CodeWritable convertedKey = CodeUtils.codeToWritable(key.toString());
+    CodeWritable convertedValue = CodeUtils.codeToWritable(value.toString());
+    realRecordWriter.write(convertedKey, convertedValue);
+  }
 
 }

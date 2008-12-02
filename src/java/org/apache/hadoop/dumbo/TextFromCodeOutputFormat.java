@@ -26,7 +26,8 @@ import org.apache.hadoop.mapred.TextOutputFormat;
  */
 public class TextFromCodeOutputFormat extends FromCodeOutputFormat {
 
-	public TextFromCodeOutputFormat() {
-		super(new TextOutputFormat<Writable, Writable>());
-	}
+  public TextFromCodeOutputFormat() {
+    super(new TextOutputFormat<Writable, Writable>());
+  }
+  
 }

@@ -45,7 +45,7 @@ public class CatPath extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Configuration conf = getConf();
     JobConf job = new JobConf(conf);
-    
+
     FileSystem fs = FileSystem.get(conf);
     Path inputPath = new Path(args[1]);
     List<FileStatus> inputFiles = new ArrayList<FileStatus>(); 
@@ -59,8 +59,8 @@ public class CatPath extends Configured implements Tool {
     }
 
     for (FileStatus fileStatus : inputFiles) {
-    	FileSplit split = new FileSplit(fileStatus.getPath(), 0, 
-    			fileStatus.getLen()*fileStatus.getBlockSize(), (String[])null);
+      FileSplit split = new FileSplit(fileStatus.getPath(), 0, 
+          fileStatus.getLen()*fileStatus.getBlockSize(), (String[])null);
       InputFormat<Text,Text> inputformat;
       if (args[0].toLowerCase().equals("sequencefileasnamedcode")) {
         inputformat = new SequenceFileAsCodeInputFormat(true);
@@ -71,14 +71,14 @@ public class CatPath extends Configured implements Tool {
       } else if (args[0].toLowerCase().equals("textascode")) {
         inputformat = new TextAsCodeInputFormat(false);
       } else {
-      	AsCodeInputFormat asCodeInputformat;
-      	if (args[0].toLowerCase().equals("asnamedcode")) {
-      		asCodeInputformat = new AsCodeInputFormat(true); 
-      	} else {
-      		asCodeInputformat = new AsCodeInputFormat(false); 
-      	}
-      	asCodeInputformat.configure(job);
-      	inputformat = asCodeInputformat;
+        AsCodeInputFormat asCodeInputformat;
+        if (args[0].toLowerCase().equals("asnamedcode")) {
+          asCodeInputformat = new AsCodeInputFormat(true); 
+        } else {
+          asCodeInputformat = new AsCodeInputFormat(false); 
+        }
+        asCodeInputformat.configure(job);
+        inputformat = asCodeInputformat;
       }
       RecordReader<Text,Text> reader = inputformat.getRecordReader(split, job, Reporter.NULL);
       Text key = new Text(), value = new Text();
@@ -87,7 +87,7 @@ public class CatPath extends Configured implements Tool {
       }
       reader.close();
     }
-    
+
     return 0;
   }
 

@@ -25,12 +25,12 @@ import org.apache.hadoop.mapred.TextInputFormat;
  */
 public class TextAsCodeInputFormat extends AsCodeInputFormat {
 
-	public TextAsCodeInputFormat(boolean named) {
-		super(new TextInputFormat(), named);
-	}
-	
-	public TextAsCodeInputFormat() {
-		this(false);
-	}
-	
+  public TextAsCodeInputFormat(boolean named) {
+    super(new TextInputFormat(), named);
+  }
+
+  public TextAsCodeInputFormat() {
+    this(false);
+  }
+
 }

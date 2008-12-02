@@ -29,46 +29,46 @@ import org.apache.hadoop.mapred.RecordReader;
  */
 public class AsCodeRecordReader implements RecordReader<Text, Text> {
 
-	private RecordReader<Writable, Writable> realRecordReader;
-	private Writable realKey, realValue;
-	private String filenameCode = null;
-	
-	public AsCodeRecordReader(RecordReader<Writable, Writable> realRecordReader, String filename) {
-		this.realRecordReader = realRecordReader;
-		realKey = realRecordReader.createKey();
-		realValue = realRecordReader.createValue();
-		if (filename != null) filenameCode = CodeUtils.stringToCode(filename);
-	}
-	
-	public void close() throws IOException {
-		realRecordReader.close();
-	}
+  private RecordReader<Writable, Writable> realRecordReader;
+  private Writable realKey, realValue;
+  private String filenameCode = null;
 
-	public Text createKey() {
-		return new Text();
-	}
+  public AsCodeRecordReader(RecordReader<Writable, Writable> realRecordReader, String filename) {
+    this.realRecordReader = realRecordReader;
+    realKey = realRecordReader.createKey();
+    realValue = realRecordReader.createValue();
+    if (filename != null) filenameCode = CodeUtils.stringToCode(filename);
+  }
 
-	public Text createValue() {
-		return new Text();
-	}
+  public void close() throws IOException {
+    realRecordReader.close();
+  }
 
-	public long getPos() throws IOException {
-		return realRecordReader.getPos();
-	}
+  public Text createKey() {
+    return new Text();
+  }
 
-	public float getProgress() throws IOException {
-		return realRecordReader.getProgress();
-	}
+  public Text createValue() {
+    return new Text();
+  }
 
-	public boolean next(Text key, Text value) throws IOException {
-		if (!realRecordReader.next(realKey, realValue)) return false;
-		if (filenameCode != null) {
-			key.set(CodeUtils.codesToTuple(filenameCode, CodeUtils.writableToCode(realKey)));
-		} else {
-			key.set(CodeUtils.writableToCode(realKey));
-		}
-		value.set(CodeUtils.writableToCode(realValue));
-		return true;
-	}
+  public long getPos() throws IOException {
+    return realRecordReader.getPos();
+  }
+
+  public float getProgress() throws IOException {
+    return realRecordReader.getProgress();
+  }
+
+  public boolean next(Text key, Text value) throws IOException {
+    if (!realRecordReader.next(realKey, realValue)) return false;
+    if (filenameCode != null) {
+      key.set(CodeUtils.codesToTuple(filenameCode, CodeUtils.writableToCode(realKey)));
+    } else {
+      key.set(CodeUtils.writableToCode(realKey));
+    }
+    value.set(CodeUtils.writableToCode(realValue));
+    return true;
+  }
 
 }

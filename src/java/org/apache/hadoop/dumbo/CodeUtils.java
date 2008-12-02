@@ -233,7 +233,9 @@ public abstract class CodeUtils {
       return stringToCode(((Text)w).toString());
     } else if (w instanceof Record) {
       return recordToCode((Record)w);
-    } else return stringToCode(w.toString());
+    } else {
+      return stringToCode(w.toString());
+    }
   }
 
   public static CodeWritable codeToWritable(String code) {

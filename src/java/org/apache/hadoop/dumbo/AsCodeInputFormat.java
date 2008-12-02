@@ -35,73 +35,73 @@ import org.apache.hadoop.mapred.TextInputFormat;
  */
 public class AsCodeInputFormat implements InputFormat<Text,Text>, JobConfigurable {
 
-	private InputFormat realInputFormat = null;
-	private boolean named = false;
-	
-	public AsCodeInputFormat(InputFormat realInputFormat, boolean named) {
-		this.realInputFormat = realInputFormat;
-		this.named = named;
-	}
-	
-	public AsCodeInputFormat(InputFormat realInputFormat) {
-		this(realInputFormat, false);
-	}
-	
-	public AsCodeInputFormat(boolean named) {
-		this(null, named);
-	}
-	
-	public AsCodeInputFormat() {
-		this(null, false);
-	}
-	
-	public void configure(JobConf job) {
-		if (realInputFormat == null) {
-			Class<? extends InputFormat> realInputFormatClass 
-				= job.getClass("dumbo.as.code.input.format.class", TextInputFormat.class, InputFormat.class);
-			try {
-				realInputFormat = realInputFormatClass.newInstance();
-				for (Class interface_ : realInputFormatClass.getInterfaces()) {
-					if (interface_.equals(JobConfigurable.class)) {
-						JobConfigurable jc = (JobConfigurable) realInputFormat;
-						jc.configure(job);
-						break;
-					}
-				}
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-				throw new RuntimeException(e);
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-				throw new RuntimeException(e);
-			}
-		}
-		if (!named) {
-			named = job.getBoolean("dumbo.as.named.code", false);
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	private RecordReader<Text,Text> createRecordReader(InputSplit split, JobConf job,
-			Reporter reporter, String filename) throws IOException {
-		return new AsCodeRecordReader(realInputFormat.getRecordReader(split, job, reporter), filename);
-	}
-	
-	public RecordReader<Text,Text> getRecordReader(InputSplit split, JobConf job,
-			Reporter reporter) throws IOException {
-		String filename = null;
-		if (named && split instanceof FileSplit) {
-			filename = ((FileSplit) split).getPath().getName();
-		}
-		return createRecordReader(split, job, reporter, filename);
-	}
+  private InputFormat realInputFormat = null;
+  private boolean named = false;
 
-	public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-		return realInputFormat.getSplits(job, numSplits);
-	}
+  public AsCodeInputFormat(InputFormat realInputFormat, boolean named) {
+    this.realInputFormat = realInputFormat;
+    this.named = named;
+  }
 
-	public void validateInput(JobConf job) throws IOException {
-		realInputFormat.validateInput(job);
-	}
+  public AsCodeInputFormat(InputFormat realInputFormat) {
+    this(realInputFormat, false);
+  }
+
+  public AsCodeInputFormat(boolean named) {
+    this(null, named);
+  }
+
+  public AsCodeInputFormat() {
+    this(null, false);
+  }
+
+  public void configure(JobConf job) {
+    if (realInputFormat == null) {
+      Class<? extends InputFormat> realInputFormatClass 
+      = job.getClass("dumbo.as.code.input.format.class", TextInputFormat.class, InputFormat.class);
+      try {
+        realInputFormat = realInputFormatClass.newInstance();
+        for (Class interface_ : realInputFormatClass.getInterfaces()) {
+          if (interface_.equals(JobConfigurable.class)) {
+            JobConfigurable jc = (JobConfigurable) realInputFormat;
+            jc.configure(job);
+            break;
+          }
+        }
+      } catch (InstantiationException e) {
+        e.printStackTrace();
+        throw new RuntimeException(e);
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+        throw new RuntimeException(e);
+      }
+    }
+    if (!named) {
+      named = job.getBoolean("dumbo.as.named.code", false);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private RecordReader<Text,Text> createRecordReader(InputSplit split, JobConf job,
+      Reporter reporter, String filename) throws IOException {
+    return new AsCodeRecordReader(realInputFormat.getRecordReader(split, job, reporter), filename);
+  }
+
+  public RecordReader<Text,Text> getRecordReader(InputSplit split, JobConf job,
+      Reporter reporter) throws IOException {
+    String filename = null;
+    if (named && split instanceof FileSplit) {
+      filename = ((FileSplit) split).getPath().getName();
+    }
+    return createRecordReader(split, job, reporter, filename);
+  }
+
+  public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
+    return realInputFormat.getSplits(job, numSplits);
+  }
+
+  public void validateInput(JobConf job) throws IOException {
+    realInputFormat.validateInput(job);
+  }
 
 }
