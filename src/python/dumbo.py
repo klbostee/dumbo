@@ -26,7 +26,12 @@ def dumpcode(outputs):
     for output in outputs: yield map(repr,output)
 
 def loadcode(inputs):
-    for input in inputs: yield map(eval,input.split("\t",1))
+    try: 
+        for input in inputs: yield map(eval,input.split("\t",1))
+    except TypeError:
+        print >>sys.stderr,"ERROR: problem with key (%s) or value (%s)" \
+            % tuple(input.split("\t",1))
+        raise
 
 def dumptext(outputs):
     newoutput = []
@@ -45,7 +50,7 @@ def loadtext(inputs):
 
 def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,mapclose=None,redclose=None,
-        iter=0,opts=[],newopts={}):
+        iter=0,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
         try:
             regex = re.compile(".*\.egg")
@@ -77,35 +82,23 @@ def run(mapper,reducer=None,combiner=None,
             else: outputs = inputs
             for output in dumpcode(outputs): print "\t".join(output)
     else:
-        if not opts: opts = parseargs(sys.argv[1:])
-        opts += [("iteration","%i" % iter)]
+        opts = parseargs(sys.argv[1:])
+        newopts["iteration"] = str(iter)
         if not reducer: newopts["numreducetasks"] = "0"
         key,delindexes = None,[]
         for index,(key,value) in enumerate(opts):
             if newopts.has_key(key): delindexes.append(index)
         for delindex in reversed(delindexes): del opts[delindex]
         opts += newopts.iteritems()
-        retval = execute("python -m dumbo start '%s'" % sys.argv[0],opts,printcmd=False)
+        retval = execute("python -m dumbo start '%s'" % sys.argv[0],opts)
         if retval == 127:
             print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
         if retval != 0: sys.exit(retval)
 
 class Job:
-    def __init__(self): 
-        self.iters,self.opts = [],parseargs(sys.argv[1:])
-        self.cmdopts = set(map(itemgetter(0),self.opts))
-    def addopt(self,key,value):
-        if not key in self.cmdopts: self.opts.append((key,value))
-    def delopt(self,key):
-        return getopts(self.opts,[key])[key]
-    def additer(self,*args,**kwargs): 
-        self.iters.append((args,kwargs))
-    def run(self,starter=None):
-        if starter and (len(sys.argv) == 1 or sys.argv[1][0] == "-"): 
-            errormsg = starter(self)
-            if errormsg:
-                print >>sys.stderr,errormsg
-                sys.exit(1)
+    def __init__(self): self.iters = []
+    def additer(self,*args,**kwargs): self.iters.append((args,kwargs))
+    def run(self):
         scratch = "dumbo-tmp-%i" % random.randint(0,sys.maxint)
         for index,(args,kwargs) in enumerate(self.iters):
             newopts = {"name": "%s (%s/%s)" % (sys.argv[0].split("/")[-1],
@@ -118,7 +111,6 @@ class Job:
                 newopts["output"] = "%s-%i" % (scratch,index)
                 newopts["outputformat"] = "sequencefile"
             kwargs["iter"],kwargs["newopts"] = index,newopts
-            kwargs["opts"] = self.opts
             run(*args,**kwargs)
 
 def incrcounter(group,counter,amount):
