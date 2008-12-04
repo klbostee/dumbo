@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.dumbo;
 
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 
 /**
  * An input format that converts text to Dumbo code.
  */
 public class TextAsCodeInputFormat extends AsCodeInputFormat {
-
+  
   public TextAsCodeInputFormat(boolean named) {
     super(new TextInputFormat(), named);
   }
@@ -33,4 +34,8 @@ public class TextAsCodeInputFormat extends AsCodeInputFormat {
     this(false);
   }
 
+  public void configure(JobConf job) {
+    super.configure(job);
+    ((TextInputFormat) getRealInputFormat()).configure(job);
+  }
 }

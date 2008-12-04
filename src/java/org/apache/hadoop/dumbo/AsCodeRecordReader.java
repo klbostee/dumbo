@@ -31,13 +31,13 @@ public class AsCodeRecordReader implements RecordReader<Text, Text> {
 
   private RecordReader<Writable, Writable> realRecordReader;
   private Writable realKey, realValue;
-  private String filenameCode = null;
+  private String fileCode = null;
 
-  public AsCodeRecordReader(RecordReader<Writable, Writable> realRecordReader, String filename) {
+  public AsCodeRecordReader(RecordReader<Writable, Writable> realRecordReader, String file) {
     this.realRecordReader = realRecordReader;
     realKey = realRecordReader.createKey();
     realValue = realRecordReader.createValue();
-    if (filename != null) filenameCode = CodeUtils.stringToCode(filename);
+    if (file != null) fileCode = CodeUtils.stringToCode(file);
   }
 
   public void close() throws IOException {
@@ -62,8 +62,8 @@ public class AsCodeRecordReader implements RecordReader<Text, Text> {
 
   public boolean next(Text key, Text value) throws IOException {
     if (!realRecordReader.next(realKey, realValue)) return false;
-    if (filenameCode != null) {
-      key.set(CodeUtils.codesToTuple(filenameCode, CodeUtils.writableToCode(realKey)));
+    if (fileCode != null) {
+      key.set(CodeUtils.codesToTuple(fileCode, CodeUtils.writableToCode(realKey)));
     } else {
       key.set(CodeUtils.writableToCode(realKey));
     }

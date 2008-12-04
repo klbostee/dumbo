@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.dumbo;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
 /**
@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.SequenceFileInputFormat;
 public class SequenceFileAsCodeInputFormat extends AsCodeInputFormat {
 
   public SequenceFileAsCodeInputFormat(boolean named) {
-    super(new SequenceFileInputFormat<Text, Text>(), named);
+    super(new SequenceFileInputFormat<Writable, Writable>(), named);
   }
   
   public SequenceFileAsCodeInputFormat() {

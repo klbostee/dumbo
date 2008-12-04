@@ -45,7 +45,7 @@ def loadtext(inputs):
 
 def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,mapclose=None,redclose=None,
-        iter=0,newopts={}):
+        iter=0,opts=[],newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
         try:
             regex = re.compile(".*\.egg")
@@ -77,7 +77,8 @@ def run(mapper,reducer=None,combiner=None,
             else: outputs = inputs
             for output in dumpcode(outputs): print "\t".join(output)
     else:
-        opts = parseargs(sys.argv[1:]) + [("iteration","%i" % iter)]
+        if not opts: opts = parseargs(sys.argv[1:])
+        opts += [("iteration","%i" % iter)]
         if not reducer: newopts["numreducetasks"] = "0"
         key,delindexes = None,[]
         for index,(key,value) in enumerate(opts):
@@ -90,9 +91,21 @@ def run(mapper,reducer=None,combiner=None,
         if retval != 0: sys.exit(retval)
 
 class Job:
-    def __init__(self): self.iters = []
-    def additer(self,*args,**kwargs): self.iters.append((args,kwargs))
-    def run(self):
+    def __init__(self): 
+        self.iters,self.opts = [],parseargs(sys.argv[1:])
+        self.cmdopts = set(map(itemgetter(0),self.opts))
+    def addopt(self,key,value):
+        if not key in self.cmdopts: self.opts.append((key,value))
+    def delopt(self,key):
+        return getopts(self.opts,[key])[key]
+    def additer(self,*args,**kwargs): 
+        self.iters.append((args,kwargs))
+    def run(self,starter=None):
+        if starter and (len(sys.argv) == 1 or sys.argv[1][0] == "-"): 
+            errormsg = starter(self)
+            if errormsg:
+                print >>sys.stderr,errormsg
+                sys.exit(1)
         scratch = "dumbo-tmp-%i" % random.randint(0,sys.maxint)
         for index,(args,kwargs) in enumerate(self.iters):
             newopts = {"name": "%s (%s/%s)" % (sys.argv[0].split("/")[-1],
@@ -105,6 +118,7 @@ class Job:
                 newopts["output"] = "%s-%i" % (scratch,index)
                 newopts["outputformat"] = "sequencefile"
             kwargs["iter"],kwargs["newopts"] = index,newopts
+            kwargs["opts"] = self.opts
             run(*args,**kwargs)
 
 def incrcounter(group,counter,amount):
@@ -223,29 +237,28 @@ def startonunix(prog,opts,python):
     if (not addedopts["input"]) or (not addedopts["output"]):
         print >>sys.stderr,"ERROR: input or output not specified"
         return 1
-    inputs = " ".join(addedopts["input"])
+    inputs = addedopts["input"]
     output = addedopts["output"][0]
     pyenv = envdef("PYTHONPATH",addedopts["libegg"],
                    shortcuts=dict(configopts("eggs",prog)))
     cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
         for arg in addedopts["cmdenv"])
     if addedopts["pv"] and addedopts["pv"][0] == "yes":
-        cat = "pv -cN source"
-        mpv,spv,rpv = "| pv -cN map ","| pv -cN sort ","| pv -cN reduce "
-    else: cat,mpv,spv,rpv = "cat","","",""
-    encodepipe = ""
-    if addedopts["inputformat"] and addedopts["inputformat"][0] == "text":
-        encodepipe = "| %s -m dumbo encodepipe " % python
-        if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
-            print >>sys.stderr,"WARNING: the added filenames might be incorrect" 
-            encodepipe += "-addpath %s " % addedopts["input"][0]
+        mpv = "| pv -s `du -b %s | cut -f 1` -cN map " % " ".join(inputs)
+        spv,rpv = "| pv -cN sort ","| pv -cN reduce "
+    else: mpv,spv,rpv = "","",""
+    encodepipe = python + " -m dumbo encodepipe -file " + " -file ".join(inputs)
+    if addedopts["inputformat"] and addedopts["inputformat"][0] != "text":
+        encodepipe += " -alreadycoded yes"
+    if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
+        encodepipe += " -addpath yes"
     if addedopts["numreducetasks"] and addedopts["numreducetasks"][0] == "0":
-        retval = execute("%s %s %s| %s %s %s %s > '%s'" % \
-                         (cat,inputs,encodepipe,pyenv,cmdenv,mapper,mpv,output))
+        retval = execute("%s | %s %s %s %s > '%s'" % \
+                         (encodepipe,pyenv,cmdenv,mapper,mpv,output))
     else:
-        retval = execute("%s %s %s| %s %s %s %s| LC_ALL=C " \
+        retval = execute("%s | %s %s %s %s| LC_ALL=C " \
                          "sort %s| %s %s %s %s> '%s'" % \
-                         (cat,inputs,encodepipe,pyenv,cmdenv,mapper,mpv,
+                         (encodepipe,pyenv,cmdenv,mapper,mpv,
                           spv,pyenv,cmdenv,reducer,rpv,output))
     if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
         for file in addedopts["input"]: execute("rm " + file)
@@ -289,13 +302,13 @@ def startonstreaming(prog,opts,hadoop):
         addedopts["cachearchive"][0]))
     if not addedopts["inputformat"]: addedopts["inputformat"] = ["sequencefile"] 
     inputformat_shortcuts = {
-        "text": "org.apache.hadoop.mapred.TextAsCodeInputFormat", 
-        "sequencefile": "org.apache.hadoop.mapred.SequenceFileAsCodeInputFormat"}
+        "text": dumbopkg + ".TextAsCodeInputFormat", 
+        "sequencefile": dumbopkg + ".SequenceFileAsCodeInputFormat",
+        "auto": dumbopkg + ".AutoAsCodeInputFormat"}
     inputformat_shortcuts.update(configopts("inputformats",prog))
     inputformat = addedopts["inputformat"][0]
     if inputformat_shortcuts.has_key(inputformat.lower()):
         inputformat = inputformat_shortcuts[inputformat.lower()]
-    print >>sys.stderr,"HEY HEY:",inputformat
     if inputformat.endswith("AsCodeInputFormat"):
         opts.append(("inputformat",inputformat))
     else:
@@ -337,7 +350,7 @@ def startonstreaming(prog,opts,hadoop):
 
 def cat(path,opts):
     addedopts = getopts(opts,["hadoop","type","libjar"])
-    if not addedopts["hadoop"]: return decodepipe(opts + [("path",path)])
+    if not addedopts["hadoop"]: return decodepipe(opts + [("file",path)])
     hadoop = addedopts["hadoop"][0]
     dumbojar = findjar(hadoop,"dumbo")
     if not dumbojar:
@@ -347,7 +360,8 @@ def cat(path,opts):
     else: type = addedopts["type"][0]
     hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"])
     try:
-        if type[:4] == "text": codetype = "textascode"
+        if type[:4] == "auto": codetype = "autoascode"
+        elif type[:4] == "text": codetype = "textascode"
         else: codetype = "sequencefileascode"
         process = os.popen("%s %s/bin/hadoop jar %s catpath %s %s" % \
             (hadenv,hadoop,dumbojar,codetype,path))    
@@ -359,24 +373,28 @@ def cat(path,opts):
     return 0
 
 def encodepipe(opts=[]):
-    addedopts,filename = getopts(opts,["addpath","path"]),None
-    if addedopts["addpath"]: filename = addedopts["addpath"][0]
-    if addedopts["path"]: file = open(addedopts["path"][0])
-    else: file = sys.stdin
-    outputs = loadtext(line[:-1] for line in file)
-    if filename: outputs = (((filename,key),value) for key,value in outputs)
-    for output in dumpcode(outputs): print "\t".join(output)
-    file.close()
+    addedopts = getopts(opts,["addpath","file","alreadycoded"])
+    if addedopts["file"]: files = (open(f) for f in addedopts["file"])
+    else: files = [sys.stdin]
+    for file in files:
+        outputs = (line[:-1] for line in file)
+        if addedopts["alreadycoded"]: outputs = loadcode(outputs)
+        else: outputs = loadtext(outputs)
+        if addedopts["addpath"]: 
+            outputs = (((file.name,key),value) for key,value in outputs)
+        for output in dumpcode(outputs): print "\t".join(output)
+        file.close()
     return 0
     
 def decodepipe(opts=[]):
-    addedopts = getopts(opts,["path"])
-    if addedopts["path"]: file = open(addedopts["path"][0])
-    else: file = sys.stdin
-    outputs = loadcode(line[:-1] for line in file)
-    for output in dumptext(outputs): print "\t".join(output)
-    file.close()
-    return 0
+    addedopts = getopts(opts,["file"])
+    if addedopts["file"]: files = (open(f) for f in addedopts["file"])
+    else: files = [sys.stdin]
+    for file in files:
+        outputs = loadcode(line[:-1] for line in file)
+        for output in dumptext(outputs): print "\t".join(output)
+        file.close()
+        return 0
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

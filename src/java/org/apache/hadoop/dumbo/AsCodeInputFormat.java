@@ -83,25 +83,32 @@ public class AsCodeInputFormat implements InputFormat<Text,Text>, JobConfigurabl
 
   @SuppressWarnings("unchecked")
   private RecordReader<Text,Text> createRecordReader(InputSplit split, JobConf job,
-      Reporter reporter, String filename) throws IOException {
-    return new AsCodeRecordReader(realInputFormat.getRecordReader(split, job, reporter), filename);
+      Reporter reporter, String file) throws IOException {
+    return new AsCodeRecordReader(realInputFormat.getRecordReader(split, job, reporter), file);
   }
 
   public RecordReader<Text,Text> getRecordReader(InputSplit split, JobConf job,
       Reporter reporter) throws IOException {
-    String filename = null;
+    String file = null;
     if (named && split instanceof FileSplit) {
-      filename = ((FileSplit) split).getPath().getName();
+      file = ((FileSplit) split).getPath().toString();
     }
-    return createRecordReader(split, job, reporter, filename);
+    return createRecordReader(split, job, reporter, file);
   }
 
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     return realInputFormat.getSplits(job, numSplits);
   }
 
+  @Deprecated
   public void validateInput(JobConf job) throws IOException {
-    realInputFormat.validateInput(job);
+    if (realInputFormat != null) {
+      realInputFormat.validateInput(job);
+    }
   }
 
+  public InputFormat getRealInputFormat() {
+    return realInputFormat;
+  }
+  
 }

@@ -70,6 +70,10 @@ public class CatPath extends Configured implements Tool {
         inputformat = new TextAsCodeInputFormat(true);
       } else if (args[0].toLowerCase().equals("textascode")) {
         inputformat = new TextAsCodeInputFormat(false);
+      } else if (args[0].toLowerCase().equals("autoasnamedcode")) {
+        inputformat = new AutoAsCodeInputFormat(true);
+      } else if (args[0].toLowerCase().equals("autoascode")) {
+        inputformat = new AutoAsCodeInputFormat(false);
       } else {
         AsCodeInputFormat asCodeInputformat;
         if (args[0].toLowerCase().equals("asnamedcode")) {
