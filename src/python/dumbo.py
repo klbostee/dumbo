@@ -217,7 +217,7 @@ def start(prog,opts):
 def startonunix(prog,opts,python):
     opts += configopts("unix",prog,opts)
     addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
-                              "delinputs","cmdenv","pv","addfilename",
+                              "delinputs","cmdenv","pv","addpath",
                               "inputformat","outputformat","numreducetasks"])
     mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
     if (not addedopts["input"]) or (not addedopts["output"]):
@@ -236,9 +236,9 @@ def startonunix(prog,opts,python):
     encodepipe = ""
     if addedopts["inputformat"] and addedopts["inputformat"][0] == "text":
         encodepipe = "| %s -m dumbo encodepipe " % python
-        if addedopts["addfilename"] and addedopts["addfilename"][0] == 'yes':
+        if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
             print >>sys.stderr,"WARNING: the added filenames might be incorrect" 
-            encodepipe += "-addfilename %s " % addedopts["input"][0]
+            encodepipe += "-addpath %s " % addedopts["input"][0]
     if addedopts["numreducetasks"] and addedopts["numreducetasks"][0] == "0":
         retval = execute("%s %s %s| %s %s %s %s > '%s'" % \
                          (cat,inputs,encodepipe,pyenv,cmdenv,mapper,mpv,output))
@@ -257,7 +257,7 @@ def startonstreaming(prog,opts,hadoop):
     opts.append(("file",sys.argv[0]))
     addedopts = getopts(opts,["name","delinputs","libegg","libjar",
         "inputformat","outputformat","nummaptasks","numreducetasks",
-        "priority","cachefile","cachearchive","codewritable","addfilename"])
+        "priority","cachefile","cachearchive","codewritable","addpath"])
     streamingjar,dumbojar = findjar(hadoop,"streaming"),findjar(hadoop,"dumbo")
     if not streamingjar:
         print >>sys.stderr,"ERROR: Streaming jar not found"
@@ -289,14 +289,18 @@ def startonstreaming(prog,opts,hadoop):
         addedopts["cachearchive"][0]))
     if not addedopts["inputformat"]: addedopts["inputformat"] = ["sequencefile"] 
     inputformat_shortcuts = {
-        "text": "org.apache.hadoop.mapred.TextInputFormat", 
-        "sequencefile": "org.apache.hadoop.mapred.SequenceFileInputFormat"}
+        "text": "org.apache.hadoop.mapred.TextAsCodeInputFormat", 
+        "sequencefile": "org.apache.hadoop.mapred.SequenceFileAsCodeInputFormat"}
     inputformat_shortcuts.update(configopts("inputformats",prog))
     inputformat = addedopts["inputformat"][0]
     if inputformat_shortcuts.has_key(inputformat.lower()):
         inputformat = inputformat_shortcuts[inputformat.lower()]
-    opts.append(("jobconf","dumbo.as.code.input.format.class=" + inputformat))
-    opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
+    print >>sys.stderr,"HEY HEY:",inputformat
+    if inputformat.endswith("AsCodeInputFormat"):
+        opts.append(("inputformat",inputformat))
+    else:
+        opts.append(("jobconf","dumbo.as.code.input.format.class=" + inputformat))
+        opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
     if not addedopts["outputformat"]: addedopts["outputformat"] = ["sequencefile"] 
     outputformat_shortcuts = {
         "sequencefile": "org.apache.hadoop.mapred.SequenceFileOutputFormat"}
@@ -317,7 +321,7 @@ def startonstreaming(prog,opts,hadoop):
         opts.append(("mapper",dumbopkg + ".CodeWritableMapper"))
         opts.append(("jobconf","dumbo.code.writable.map.class=" \
                      "org.apache.hadoop.streaming.PipeMapper"))
-    if addedopts["addfilename"] and addedopts["addfilename"][0] == 'yes':
+    if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
         opts.append(("jobconf", "dumbo.as.named.code=true"))
     envdef("PYTHONPATH",addedopts["libegg"],"file",opts,
            shortcuts=dict(configopts("eggs",prog)))
@@ -355,8 +359,8 @@ def cat(path,opts):
     return 0
 
 def encodepipe(opts=[]):
-    addedopts,filename = getopts(opts,["addfilename","path"]),None
-    if addedopts["addfilename"]: filename = addedopts["addfilename"][0]
+    addedopts,filename = getopts(opts,["addpath","path"]),None
+    if addedopts["addpath"]: filename = addedopts["addpath"][0]
     if addedopts["path"]: file = open(addedopts["path"][0])
     else: file = sys.stdin
     outputs = loadtext(line[:-1] for line in file)
