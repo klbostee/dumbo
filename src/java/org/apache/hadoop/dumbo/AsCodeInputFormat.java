@@ -84,6 +84,7 @@ public class AsCodeInputFormat implements InputFormat<Text,Text>, JobConfigurabl
   @SuppressWarnings("unchecked")
   private RecordReader<Text,Text> createRecordReader(InputSplit split, JobConf job,
       Reporter reporter, String file) throws IOException {
+    reporter.setStatus(split.toString());
     return new AsCodeRecordReader(realInputFormat.getRecordReader(split, job, reporter), file);
   }
 

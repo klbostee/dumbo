@@ -26,12 +26,12 @@ def dumpcode(outputs):
     for output in outputs: yield map(repr,output)
 
 def loadcode(inputs):
-    try: 
-        for input in inputs: yield map(eval,input.split("\t",1))
-    except TypeError:
-        print >>sys.stderr,"ERROR: problem with key (%s) or value (%s)" \
-            % tuple(input.split("\t",1))
-        raise
+    for input in inputs:
+        try: yield map(eval,input.split("\t",1))
+        except:
+            if os.environ.has_key("debug"): raise
+            print >>sys.stderr,"WARNING: skipping bad input (%s)" % input
+            incrcounter("Dumbo","Bad inputs",1)
 
 def dumptext(outputs):
     newoutput = []
@@ -120,7 +120,7 @@ def setstatus(message):
     print >>sys.stderr,"reporter:status:%s" % message
 
 class Counter:
-    def __init__(self,name,group="counters"):
+    def __init__(self,name,group="Program"):
         self.group = group
         self.name = name
     def incr(self,amount):
@@ -203,12 +203,13 @@ def submit(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
 
 def start(prog,opts):
     opts += configopts("common",prog,opts)
-    addedopts = getopts(opts,["fake"])
+    addedopts = getopts(opts,["fake","debug","python","iteration","hadoop"])
     if addedopts["fake"] and addedopts["fake"][0] == "yes":
         def dummysystem(*args,**kwargs): return 0
         global system
         system = dummysystem  # not very clean, but it's easy and it works...
-    addedopts = getopts(opts,["python","iteration","hadoop"])
+    if addedopts["debug"] and addedopts["debug"][0] == "yes":
+        opts.append(("cmdenv","debug=yes"))
     if not addedopts["python"]: python = "python"
     else: python = addedopts["python"][0]
     if not addedopts["iteration"]: iter = 0
