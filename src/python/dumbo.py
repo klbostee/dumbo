@@ -90,7 +90,11 @@ def run(mapper,reducer=None,combiner=None,
             if newopts.has_key(key): delindexes.append(index)
         for delindex in reversed(delindexes): del opts[delindex]
         opts += newopts.iteritems()
-        retval = execute("python -m dumbo start '%s'" % sys.argv[0],opts)
+        #retval = execute("python -m dumbo start '%s'" % sys.argv[0],opts)
+        #retval = start(sys.argv[0],opts)
+        hadoopopt = getopts(opts,["hadoop"],delete=False)["hadoop"]
+        if hadoopopt: retval = StreamingIteration(sys.argv[0],opts).run()
+        else: retval = UnixIteration(sys.argv[0],opts).run()
         if retval == 127:
             print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
         if retval != 0: sys.exit(retval)
@@ -201,145 +205,170 @@ def submit(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
     pyenv = envdef("PYTHONPATH",addedopts["libegg"])
     return execute("python '%s'" % prog,opts,pyenv,stdout=stdout,stderr=stderr)
 
-def start(prog,opts):
-    opts += configopts("common",prog,opts)
-    addedopts = getopts(opts,["fake","debug","python","iteration","hadoop"])
-    if addedopts["fake"] and addedopts["fake"][0] == "yes":
-        def dummysystem(*args,**kwargs): return 0
-        global system
-        system = dummysystem  # not very clean, but it's easy and it works...
-    if addedopts["debug"] and addedopts["debug"][0] == "yes":
-        opts.append(("cmdenv","debug=yes"))
-    if not addedopts["python"]: python = "python"
-    else: python = addedopts["python"][0]
-    if not addedopts["iteration"]: iter = 0
-    else: iter = int(addedopts["iteration"][0])
-    if not addedopts["hadoop"]: progincmd = prog
-    else: progincmd = prog.split("/")[-1]
-    opts.append(("mapper","%s %s map %i" % (python,progincmd,iter)))
-    opts.append(("reducer","%s %s red %i" % (python,progincmd,iter)))
-    if not addedopts["hadoop"]: return startonunix(prog,opts,python)
-    else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
+class Iteration:
+    def __init__(self,prog,opts):
+        self.prog,self.opts = prog,opts
+        self.opts += configopts("common",prog,self.opts)
+    def run(self):
+        addedopts = getopts(self.opts,["fake","debug","python",
+                                       "iteration","hadoop"])
+        if addedopts["fake"] and addedopts["fake"][0] == "yes":
+            def dummysystem(*args,**kwargs): return 0
+            global system
+            system = dummysystem  # not very clean, but it works...
+        if addedopts["debug"] and addedopts["debug"][0] == "yes":
+            self.opts.append(("cmdenv","debug=yes"))
+        if not addedopts["python"]: python = "python"
+        else: python = addedopts["python"][0]
+        self.opts.append(("python",python))
+        if not addedopts["iteration"]: iter = 0
+        else: iter = int(addedopts["iteration"][0])
+        if not addedopts["hadoop"]: progincmd = self.prog
+        else: 
+            self.opts.append(("hadoop",addedopts["hadoop"][0]))
+            progincmd = self.prog.split("/")[-1]
+        self.opts.append(("mapper","%s %s map %i" % (python,progincmd,iter)))
+        self.opts.append(("reducer","%s %s red %i" % (python,progincmd,iter)))
+        return 0
+        #if not addedopts["hadoop"]: return startonunix(prog,opts,python)
+        #else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
    
-def startonunix(prog,opts,python):
-    opts += configopts("unix",prog,opts)
-    addedopts = getopts(opts,["input","output","mapper","reducer","libegg",
-                              "delinputs","cmdenv","pv","addpath",
-                              "inputformat","outputformat","numreducetasks"])
-    mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
-    if (not addedopts["input"]) or (not addedopts["output"]):
-        print >>sys.stderr,"ERROR: input or output not specified"
-        return 1
-    inputs = addedopts["input"]
-    output = addedopts["output"][0]
-    pyenv = envdef("PYTHONPATH",addedopts["libegg"],
-                   shortcuts=dict(configopts("eggs",prog)))
-    cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
-        for arg in addedopts["cmdenv"])
-    if addedopts["pv"] and addedopts["pv"][0] == "yes":
-        mpv = "| pv -s `du -b %s | cut -f 1` -cN map " % " ".join(inputs)
-        spv,rpv = "| pv -cN sort ","| pv -cN reduce "
-    else: mpv,spv,rpv = "","",""
-    encodepipe = python + " -m dumbo encodepipe -file " + " -file ".join(inputs)
-    if addedopts["inputformat"] and addedopts["inputformat"][0] != "text":
-        encodepipe += " -alreadycoded yes"
-    if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
-        encodepipe += " -addpath yes"
-    if addedopts["numreducetasks"] and addedopts["numreducetasks"][0] == "0":
-        retval = execute("%s | %s %s %s %s > '%s'" % \
-                         (encodepipe,pyenv,cmdenv,mapper,mpv,output))
-    else:
-        retval = execute("%s | %s %s %s %s| LC_ALL=C " \
-                         "sort %s| %s %s %s %s> '%s'" % \
-                         (encodepipe,pyenv,cmdenv,mapper,mpv,
-                          spv,pyenv,cmdenv,reducer,rpv,output))
-    if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
-        for file in addedopts["input"]: execute("rm " + file)
-    return retval
+class UnixIteration(Iteration):
+    def __init__(self,prog,opts):
+        Iteration.__init__(self,prog,opts)
+        self.opts += configopts("unix",prog,self.opts)
+    def run(self):
+        retval = Iteration.run(self)
+        if retval != 0: return retval
+        addedopts = getopts(self.opts,["input","output","mapper","reducer",
+                                       "libegg","delinputs","cmdenv","pv",
+                                       "addpath","inputformat","outputformat",
+                                       "numreducetasks","python"])
+        mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
+        if (not addedopts["input"]) or (not addedopts["output"]):
+            print >>sys.stderr,"ERROR: input or output not specified"
+            return 1
+        inputs = addedopts["input"]
+        output = addedopts["output"][0]
+        pyenv = envdef("PYTHONPATH",addedopts["libegg"],
+                       shortcuts=dict(configopts("eggs",self.prog)))
+        cmdenv = " ".join("%s='%s'" % tuple(arg.split("=")) \
+                          for arg in addedopts["cmdenv"])
+        if addedopts["pv"] and addedopts["pv"][0] == "yes":
+            mpv = "| pv -s `du -b %s | cut -f 1` -cN map " % " ".join(inputs)
+            spv,rpv = "| pv -cN sort ","| pv -cN reduce "
+        else: mpv,spv,rpv = "","",""
+        python = addedopts["python"][0]
+        encodepipe = python + " -m dumbo encodepipe -file " + " -file ".join(inputs)
+        if addedopts["inputformat"] and addedopts["inputformat"][0] != "text":
+            encodepipe += " -alreadycoded yes"
+        if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
+            encodepipe += " -addpath yes"
+        if addedopts["numreducetasks"] and addedopts["numreducetasks"][0] == "0":
+            retval = execute("%s | %s %s %s %s > '%s'" % \
+                             (encodepipe,pyenv,cmdenv,mapper,mpv,output))
+        else:
+            retval = execute("%s | %s %s %s %s| LC_ALL=C " \
+                             "sort %s| %s %s %s %s> '%s'" % \
+                             (encodepipe,pyenv,cmdenv,mapper,mpv,
+                              spv,pyenv,cmdenv,reducer,rpv,output))
+        if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
+            for file in addedopts["input"]: execute("rm " + file)
+        return retval
 
-def startonstreaming(prog,opts,hadoop):
-    opts += configopts("streaming",prog,opts)
-    opts.append(("file",prog))
-    opts.append(("file",sys.argv[0]))
-    addedopts = getopts(opts,["name","delinputs","libegg","libjar",
-        "inputformat","outputformat","nummaptasks","numreducetasks",
-        "priority","cachefile","cachearchive","codewritable","addpath"])
-    streamingjar,dumbojar = findjar(hadoop,"streaming"),findjar(hadoop,"dumbo")
-    if not streamingjar:
-        print >>sys.stderr,"ERROR: Streaming jar not found"
-        return 1
-    if not dumbojar:
-        print >>sys.stderr,"ERROR: Dumbo jar not found"
-        return 1
-    addedopts["libjar"].append(dumbojar)
-    dumbopkg = "org.apache.hadoop.dumbo"
-    if not addedopts["name"]:
-        opts.append(("jobconf","mapred.job.name=" + prog.split("/")[-1]))
-    else: opts.append(("jobconf","mapred.job.name=%s" % addedopts["name"][0]))
-    if addedopts["nummaptasks"]: opts.append(("jobconf",
-        "mapred.map.tasks=%s" % addedopts["nummaptasks"][0]))
-    if addedopts["numreducetasks"]: 
-        numreducetasks = int(addedopts["numreducetasks"][0])
-        opts.append(("numReduceTasks",str(numreducetasks)))
-        if numreducetasks == 0:
-            opts.append(("jobconf",
-                         "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
-            opts.append(("jobconf",
-                         "mapred.mapoutput.value.class=%s.CodeWritable" % dumbopkg))
-            addedopts["codewritable"] = ['no']
-    if addedopts["priority"]: opts.append(("jobconf",
-        "mapred.job.priority=%s" % addedopts["priority"][0]))
-    if addedopts["cachefile"]: opts.append(("cacheFile",
-        addedopts["cachefile"][0]))
-    if addedopts["cachearchive"]: opts.append(("cacheArchive",
-        addedopts["cachearchive"][0]))
-    if not addedopts["inputformat"]: addedopts["inputformat"] = ["sequencefile"] 
-    inputformat_shortcuts = {
-        "text": dumbopkg + ".TextAsCodeInputFormat", 
-        "sequencefile": dumbopkg + ".SequenceFileAsCodeInputFormat",
-        "auto": dumbopkg + ".AutoAsCodeInputFormat"}
-    inputformat_shortcuts.update(configopts("inputformats",prog))
-    inputformat = addedopts["inputformat"][0]
-    if inputformat_shortcuts.has_key(inputformat.lower()):
-        inputformat = inputformat_shortcuts[inputformat.lower()]
-    if inputformat.endswith("AsCodeInputFormat"):
-        opts.append(("inputformat",inputformat))
-    else:
-        opts.append(("jobconf","dumbo.as.code.input.format.class=" + inputformat))
-        opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
-    if not addedopts["outputformat"]: addedopts["outputformat"] = ["sequencefile"] 
-    outputformat_shortcuts = {
-        "sequencefile": "org.apache.hadoop.mapred.SequenceFileOutputFormat"}
-    outputformat_shortcuts.update(configopts("outputformats",prog))
-    outputformat = addedopts["outputformat"][0]
-    if outputformat_shortcuts.has_key(outputformat.lower()):
-        outputformat = outputformat_shortcuts[outputformat.lower()]
-    opts.append(("jobconf","dumbo.from.code.output.format.class=" + outputformat))
-    opts.append(("outputformat",dumbopkg + ".FromCodeOutputFormat"))
-    if not (addedopts["codewritable"] and addedopts["codewritable"][0] == 'no'):
-        opts.append(("jobconf",
-                     "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
-        opts.append(("jobconf",
-                     "mapred.mapoutput.value.class=%s.CodeWritable" % dumbopkg))
-        opt = getopts(opts,["mapper"])["mapper"]
-        opts.append(("jobconf","stream.map.streamprocessor=" + \
-                     urllib.quote_plus(opt[0])))
-        opts.append(("mapper",dumbopkg + ".CodeWritableMapper"))
-        opts.append(("jobconf","dumbo.code.writable.map.class=" \
-                     "org.apache.hadoop.streaming.PipeMapper"))
-    if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
-        opts.append(("jobconf", "dumbo.as.named.code=true"))
-    envdef("PYTHONPATH",addedopts["libegg"],"file",opts,
-           shortcuts=dict(configopts("eggs",prog)))
-    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",opts,
-                    shortcuts=dict(configopts("jars",prog))) 
-    cmd = hadoop + "/bin/hadoop jar " + streamingjar
-    retval = execute(cmd,opts,hadenv)
-    if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
-        for key,value in opts:
-            if key == "input":
-                execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
-    return retval
+class StreamingIteration(Iteration):
+    def __init__(self,prog,opts):
+        Iteration.__init__(self,prog,opts)
+        self.opts += configopts("streaming",prog,self.opts)
+    def run(self):
+        retval = Iteration.run(self)
+        if retval != 0: return retval
+        self.opts.append(("file",self.prog))
+        self.opts.append(("file",sys.argv[0]))
+        addedopts = getopts(self.opts,["hadoop","name","delinputs","libegg",
+                                       "libjar","inputformat","outputformat",
+                                       "nummaptasks","numreducetasks","priority",
+                                       "cachefile","cachearchive","codewritable",
+                                       "addpath","python"])
+        hadoop = addedopts["hadoop"][0]
+        streamingjar,dumbojar = findjar(hadoop,"streaming"),findjar(hadoop,"dumbo")
+        if not streamingjar:
+            print >>sys.stderr,"ERROR: Streaming jar not found"
+            return 1
+        if not dumbojar:
+            print >>sys.stderr,"ERROR: Dumbo jar not found"
+            return 1
+        addedopts["libjar"].append(dumbojar)
+        dumbopkg = "org.apache.hadoop.dumbo"
+        if not addedopts["name"]:
+            self.opts.append(("jobconf","mapred.job.name=" + self.prog.split("/")[-1]))
+        else: self.opts.append(("jobconf","mapred.job.name=%s" % addedopts["name"][0]))
+        if addedopts["nummaptasks"]:
+            self.opts.append(("jobconf",
+                              "mapred.map.tasks=%s" % addedopts["nummaptasks"][0]))
+        if addedopts["numreducetasks"]: 
+            numreducetasks = int(addedopts["numreducetasks"][0])
+            self.opts.append(("numReduceTasks",str(numreducetasks)))
+            if numreducetasks == 0:
+                self.opts.append(("jobconf",
+                                  "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
+                self.opts.append(("jobconf",
+                                  "mapred.mapoutput.value.class=%s.CodeWritable" % dumbopkg))
+                addedopts["codewritable"] = ['no']
+        if addedopts["priority"]:
+            self.opts.append(("jobconf",
+                              "mapred.job.priority=%s" % addedopts["priority"][0]))
+        if addedopts["cachefile"]: self.opts.append(("cacheFile",
+                                                     addedopts["cachefile"][0]))
+        if addedopts["cachearchive"]: self.opts.append(("cacheArchive",
+                                                        addedopts["cachearchive"][0]))
+        if not addedopts["inputformat"]: addedopts["inputformat"] = ["sequencefile"] 
+        inputformat_shortcuts = {
+            "text": dumbopkg + ".TextAsCodeInputFormat", 
+            "sequencefile": dumbopkg + ".SequenceFileAsCodeInputFormat",
+            "auto": dumbopkg + ".AutoAsCodeInputFormat"}
+        inputformat_shortcuts.update(configopts("inputformats",self.prog))
+        inputformat = addedopts["inputformat"][0]
+        if inputformat_shortcuts.has_key(inputformat.lower()):
+            inputformat = inputformat_shortcuts[inputformat.lower()]
+        if inputformat.endswith("AsCodeInputFormat"):
+            self.opts.append(("inputformat",inputformat))
+        else:
+            self.opts.append(("jobconf","dumbo.as.code.input.format.class=" + inputformat))
+            self.opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
+        if not addedopts["outputformat"]: addedopts["outputformat"] = ["sequencefile"] 
+        outputformat_shortcuts = {
+            "sequencefile": "org.apache.hadoop.mapred.SequenceFileOutputFormat"}
+        outputformat_shortcuts.update(configopts("outputformats",self.prog))
+        outputformat = addedopts["outputformat"][0]
+        if outputformat_shortcuts.has_key(outputformat.lower()):
+            outputformat = outputformat_shortcuts[outputformat.lower()]
+        self.opts.append(("jobconf","dumbo.from.code.output.format.class=" + outputformat))
+        self.opts.append(("outputformat",dumbopkg + ".FromCodeOutputFormat"))
+        if not (addedopts["codewritable"] and addedopts["codewritable"][0] == 'no'):
+            self.opts.append(("jobconf",
+                              "mapred.mapoutput.key.class=%s.CodeWritable" % dumbopkg))
+            self.opts.append(("jobconf",
+                              "mapred.mapoutput.value.class=%s.CodeWritable" % dumbopkg))
+            opt = getopts(self.opts,["mapper"])["mapper"]
+            self.opts.append(("jobconf","stream.map.streamprocessor=" + \
+                              urllib.quote_plus(opt[0])))
+            self.opts.append(("mapper",dumbopkg + ".CodeWritableMapper"))
+            self.opts.append(("jobconf","dumbo.code.writable.map.class=" \
+                              "org.apache.hadoop.streaming.PipeMapper"))
+        if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
+            self.opts.append(("jobconf", "dumbo.as.named.code=true"))
+        envdef("PYTHONPATH",addedopts["libegg"],"file",self.opts,
+               shortcuts=dict(configopts("eggs",self.prog)))
+        hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",self.opts,
+                        shortcuts=dict(configopts("jars",self.prog))) 
+        cmd = hadoop + "/bin/hadoop jar " + streamingjar
+        retval = execute(cmd,self.opts,hadenv)
+        if addedopts["delinputs"] and addedopts["delinputs"][0] == "yes":
+            for key,value in self.opts:
+                if key == "input":
+                    execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
+        return retval
 
 def cat(path,opts):
     addedopts = getopts(opts,["hadoop","type","libjar"])
