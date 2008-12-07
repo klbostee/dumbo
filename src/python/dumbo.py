@@ -112,7 +112,7 @@ class StreamingIteration(Iteration):
         retval = Iteration.run(self)
         if retval != 0: return retval
         self.opts.append(("file",self.prog))
-        self.opts.append(("file",sys.argv[0]))
+        self.opts.append(("file",findmodpath()))
         addedopts = getopts(self.opts,["hadoop","name","delinputs","libegg",
                                        "libjar","inputformat","outputformat",
                                        "nummaptasks","numreducetasks","priority",
@@ -371,6 +371,12 @@ def system(cmd,stdout=sys.stdout,stderr=sys.stderr):
     proc = subprocess.Popen(cmd,shell=True,stdout=stdout,stderr=stderr)
     return os.waitpid(proc.pid,0)[1] / 256
 
+def findmodpath():
+    python = "/usr/bin/python2.5"
+    if not os.path.exists(python): python = "/usr/bin/python"
+    if not os.path.exists(python): python = "python"
+    return os.popen(python + " -m dumbo modpath").readlines()[0].strip()
+
 def findhadoop(optval):
     hadoop,hadoop_shortcuts = optval,dict(configopts("hadoops"))
     if hadoop_shortcuts.has_key(hadoop.lower()):
@@ -468,6 +474,7 @@ if __name__ == "__main__":
         print "  python -m dumbo cat <path> [<options>]"
         print "  python -m dumbo encodepipe [<options>]"
         print "  python -m dumbo decodepipe [<options>]"
+        print "  python -m dumbo modpath"
         sys.exit(1)
     if sys.argv[1] == "start":
         retval = start(sys.argv[2],parseargs(sys.argv[2:]))
@@ -479,6 +486,9 @@ if __name__ == "__main__":
         retval = encodepipe(parseargs(sys.argv[2:]))
     elif sys.argv[1] == "decodepipe":
         retval = decodepipe(parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "modpath":
+        print sys.argv[0]
+        retval = 0
     else:
         retval = start(sys.argv[1],parseargs(sys.argv[1:]))
     sys.exit(retval)
