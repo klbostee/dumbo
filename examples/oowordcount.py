@@ -2,7 +2,7 @@
 Counts how many times each non-excluded word occurs:
 
 >>> import dumbo
->>> opts = [('input','brian.txt'),('output','counts.txt'),('inputformat','text')]
+>>> opts = [('who','Brian'),('output','counts.txt')]
 >>> logfile = open('log.txt','a')
 >>> dumbo.start('oowordcount.py',opts,stdout=logfile,stderr=logfile)
 0
@@ -23,6 +23,15 @@ class Mapper:
 def reducer(key,values):
     yield key,sum(values)
 
+def runner(job):
+    job.additer(Mapper,reducer,reducer)
+
+def starter(prog):
+    opt = prog.delopt("who")
+    if not opt: return "'who' not specified"
+    prog.addopt("input",opt[0].lower() + ".txt")
+    prog.addopt("inputformat","text")
+
 if __name__ == "__main__":
     import dumbo
-    dumbo.run(Mapper,reducer,reducer)
+    dumbo.main(runner,starter)
