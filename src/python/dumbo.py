@@ -403,8 +403,10 @@ def envdef(varname,files,optname=None,opts=None,commasep=False,shortcuts={}):
 
 def start(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
     addedopts = getopts(opts,["libegg"],delete=False)
-    pyenv = envdef("PYTHONPATH",addedopts["libegg"])
-    return execute("python '%s'" % prog,opts,pyenv,stdout=stdout,stderr=stderr,printcmd=False)
+    pyenv = envdef("PYTHONPATH",addedopts["libegg"],
+                   shortcuts=dict(configopts("eggs",prog)))
+    return execute("python '%s'" % prog,opts,pyenv,
+                   stdout=stdout,stderr=stderr,printcmd=False)
 
 def submit(*args,**kwargs):
     print >>sys.stderr,"WARNING: submit() is deprecated, use start() instead"
@@ -420,7 +422,8 @@ def cat(path,opts):
         return 1
     if not addedopts["type"]: type = "auto"
     else: type = addedopts["type"][0]
-    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"])
+    hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],
+                    shortcuts=dict(configopts("jars")))
     try:
         if type[:4] == "auto": codetype = "autoascode"
         elif type[:4] == "text": codetype = "textascode"
