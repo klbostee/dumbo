@@ -8,8 +8,7 @@ class Job:
     def run(self):
         scratch = "dumbo-tmp-%i" % random.randint(0,sys.maxint)
         for index,(args,kwargs) in enumerate(self.iters):
-            newopts = {"name": "%s (%s/%s)" % (sys.argv[0].split("/")[-1],
-                                               index+1,len(self.iters))}
+            newopts = {}
             if index != 0: 
                 newopts["input"] = "%s-%i" % (scratch,index-1)
                 newopts["delinputs"] = "yes"
@@ -17,7 +16,8 @@ class Job:
             if index != len(self.iters)-1:
                 newopts["output"] = "%s-%i" % (scratch,index)
                 newopts["outputformat"] = "sequencefile"
-            kwargs["iter"],kwargs["newopts"] = index,newopts
+            kwargs["iter"],kwargs["itercnt"] = index,len(self.iters)
+            kwargs["newopts"] = newopts
             run(*args,**kwargs)
 
 class Program:
@@ -221,7 +221,7 @@ def main(runner,starter=None):
 
 def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,mapclose=None,redclose=None,
-        iter=0,newopts={}):
+        iter=0,itercnt=1,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
         try:
             regex = re.compile(".*\.egg")
@@ -261,6 +261,10 @@ def run(mapper,reducer=None,combiner=None,
             if newopts.has_key(key): delindexes.append(index)
         for delindex in reversed(delindexes): del opts[delindex]
         opts += newopts.iteritems()
+        nameopt = getopts(opts,["name"])["name"]
+        if nameopt: name = nameopt[0]
+        else: name = sys.argv[0].split("/")[-1]
+        opts.append(("name","%s (%s/%s)" % (name,iter+1,itercnt)))
         hadoopopt = getopts(opts,["hadoop"],delete=False)["hadoop"]
         if hadoopopt: retval = StreamingIteration(sys.argv[0],opts).run()
         else: retval = UnixIteration(sys.argv[0],opts).run()
@@ -375,7 +379,10 @@ def findmodpath():
     python = "/usr/bin/python2.5"
     if not os.path.exists(python): python = "/usr/bin/python"
     if not os.path.exists(python): python = "python"
-    return os.popen(python + " -m dumbo modpath").readlines()[0].strip()
+    process = os.popen(python + " -m dumbo modpath")
+    modpath = process.readlines()[0].strip()
+    process.close()
+    return modpath
 
 def findhadoop(optval):
     hadoop,hadoop_shortcuts = optval,dict(configopts("hadoops"))
