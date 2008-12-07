@@ -480,7 +480,5 @@ if __name__ == "__main__":
     elif sys.argv[1] == "decodepipe":
         retval = decodepipe(parseargs(sys.argv[2:]))
     else:
-        print >>sys.stderr,"WARNING: the command 'python -m dumbo <prog>' is " \
-                           "deprecated, use 'python <prog>' instead" 
         retval = start(sys.argv[1],parseargs(sys.argv[1:]))
     sys.exit(retval)
