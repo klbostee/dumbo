@@ -2,103 +2,6 @@ import sys,types,os,random,re,types,subprocess,urllib
 from itertools import groupby
 from operator import itemgetter
 
-def identitymapper(key,value):
-    yield key,value
-
-def identityreducer(key,values):
-    for value in values: yield key,value
-    
-def sumreducer(key,values):
-    yield key,sum(values)
-
-def itermap(data,mapfunc):
-    for key,value in data: 
-        for output in mapfunc(key,value): yield output
-
-def iterreduce(data,redfunc):
-    for key,values in groupby(data,itemgetter(0)):
-        for output in redfunc(key,(v[1] for v in values)): yield output
-
-def itermapred(data,mapfunc,redfunc):
-    return iterreduce(sorted(itermap(data,mapfunc)),redfunc)
-
-def dumpcode(outputs):
-    for output in outputs: yield map(repr,output)
-
-def loadcode(inputs):
-    for input in inputs:
-        try: yield map(eval,input.split("\t",1))
-        except:
-            if os.environ.has_key("debug"): raise
-            print >>sys.stderr,"WARNING: skipping bad input (%s)" % input
-            incrcounter("Dumbo","Bad inputs",1)
-
-def dumptext(outputs):
-    newoutput = []
-    for output in outputs:
-        for item in output:
-            if not hasattr(item,"__iter__"): newoutput.append(str(item))
-            else: newoutput.append("\t".join(map(str,item)))
-        yield newoutput
-        del newoutput[:]
-
-def loadtext(inputs):
-    offset = 0
-    for input in inputs: 
-        yield (offset,input)
-        offset += len(input)
-
-def run(mapper,reducer=None,combiner=None,
-        mapconf=None,redconf=None,mapclose=None,redclose=None,
-        iter=0,newopts={}):
-    if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
-        try:
-            regex = re.compile(".*\.egg")
-            for eggfile in filter(regex.match,os.listdir(".")):
-                sys.path.append(eggfile)  # add eggs in current dir to path
-        except: pass
-        if type(mapper) == types.ClassType:
-            if hasattr(mapper,'map'): mapper = mapper().map
-            else: mapper = mapper()
-        if type(reducer) == types.ClassType:
-            if hasattr(reducer,'reduce'): reducer = reducer().reduce
-            else: reducer = reducer()
-        if type(combiner) == types.ClassType:
-            if hasattr(combiner,'reduce'): combiner = combiner().reduce
-            else: combiner = combiner()
-        iterarg = 0  # default value
-        if len(sys.argv) > 2: iterarg = int(sys.argv[2])
-        if iterarg == iter:
-            inputs = loadcode(line[:-1] for line in sys.stdin)
-            if sys.argv[1].startswith("map"):
-                if mapconf: mapconf()
-                outputs = itermap(inputs,mapper)
-                if combiner: outputs = iterreduce(sorted(outputs),combiner)
-                if mapclose: mapclose()
-            elif reducer: 
-                if redconf: redconf()
-                outputs = iterreduce(inputs,reducer)
-                if redclose: redclose()
-            else: outputs = inputs
-            for output in dumpcode(outputs): print "\t".join(output)
-    else:
-        opts = parseargs(sys.argv[1:])
-        newopts["iteration"] = str(iter)
-        if not reducer: newopts["numreducetasks"] = "0"
-        key,delindexes = None,[]
-        for index,(key,value) in enumerate(opts):
-            if newopts.has_key(key): delindexes.append(index)
-        for delindex in reversed(delindexes): del opts[delindex]
-        opts += newopts.iteritems()
-        #retval = execute("python -m dumbo start '%s'" % sys.argv[0],opts)
-        #retval = start(sys.argv[0],opts)
-        hadoopopt = getopts(opts,["hadoop"],delete=False)["hadoop"]
-        if hadoopopt: retval = StreamingIteration(sys.argv[0],opts).run()
-        else: retval = UnixIteration(sys.argv[0],opts).run()
-        if retval == 127:
-            print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
-        if retval != 0: sys.exit(retval)
-
 class Job:
     def __init__(self): self.iters = []
     def additer(self,*args,**kwargs): self.iters.append((args,kwargs))
@@ -116,95 +19,7 @@ class Job:
                 newopts["outputformat"] = "sequencefile"
             kwargs["iter"],kwargs["newopts"] = index,newopts
             run(*args,**kwargs)
-
-def incrcounter(group,counter,amount):
-    print >>sys.stderr,"reporter:counter:%s,%s,%s" % (group,counter,amount)
-
-def setstatus(message):
-    print >>sys.stderr,"reporter:status:%s" % message
-
-class Counter:
-    def __init__(self,name,group="Program"):
-        self.group = group
-        self.name = name
-    def incr(self,amount):
-        incrcounter(self.group,self.name,amount)
-
-def parseargs(args):
-    opts,key,values = [],None,[]
-    for arg in args:
-        if arg[0] == "-" and len(arg) > 1:
-            if key: opts.append((key," ".join(values)))
-            key,values = arg[1:],[]
-        else: values.append(arg)
-    if key: opts.append((key," ".join(values)))
-    return opts
-
-def getopts(opts,keys,delete=True):
-    askedopts = dict((key,[]) for key in keys)
-    key,delindexes = None,[]
-    for index,(key,value) in enumerate(opts):
-        key = key.lower()
-        if askedopts.has_key(key):
-            askedopts[key].append(value)
-            delindexes.append(index)
-    if delete:
-        for delindex in reversed(delindexes): del opts[delindex]
-    return askedopts
-
-def configopts(section,prog,opts=[]):
-    from ConfigParser import SafeConfigParser,NoSectionError
-    defaults = {'prog': prog.split("/")[-1].split(".py",1)[0]}
-    try: defaults.update([('user',os.environ["USER"]),('pwd',os.environ["PWD"])])
-    except KeyError: pass
-    for key,value in opts: defaults[key] = value
-    parser = SafeConfigParser(defaults)
-    parser.read(["/etc/dumbo.conf",os.environ["HOME"]+"/.dumborc"])
-    results,excludes = [],set(defaults.iterkeys())
-    try: 
-        for key,value in parser.items(section):
-            if not key in excludes: 
-                results.append((key.split("_",1)[0],value))
-    except NoSectionError: pass
-    return results
-
-def execute(cmd,opts=[],precmd="",printcmd=True,stdout=sys.stdout,stderr=sys.stderr):
-    if precmd: cmd = " ".join((precmd,cmd))
-    args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
-    if args: cmd = " ".join((cmd,args))
-    if printcmd: print >>stderr,"EXEC:",cmd
-    return system(cmd,stdout,stderr)
-    
-def system(cmd,stdout=sys.stdout,stderr=sys.stderr):
-    if sys.version[:3] == "2.4": return os.system(cmd) / 256
-    proc = subprocess.Popen(cmd,shell=True,stdout=stdout,stderr=stderr)
-    return os.waitpid(proc.pid,0)[1] / 256
-
-def findjar(hadoop,name):
-    jardir = hadoop + "/build/contrib/" + name
-    if not os.path.exists(jardir): jardir = hadoop + "/contrib/" + name
-    if not os.path.exists(jardir): jardir = hadoop + "/contrib"
-    regex = re.compile("hadoop.*" + name + "\.jar")
-    try: return jardir + "/" + filter(regex.match,os.listdir(jardir))[-1]
-    except: return None
-
-def envdef(varname,files,optname=None,opts=None,commasep=False,shortcuts={}):
-    path,optvals="",[]
-    for file in files:
-        if shortcuts.has_key(file.lower()): file = shortcuts[file.lower()]
-        path += file + ":"
-        optvals.append(file)
-    if optname and optvals:
-        if not commasep: 
-            for optval in optvals: opts.append((optname,optval))
-        else: opts.append((optname,",".join(optvals)))
-    return '%s="%s$%s"' % (varname,path,varname)
-
-def submit(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
-    addedopts = getopts(opts,["libegg"],delete=False)
-    pyenv = envdef("PYTHONPATH",addedopts["libegg"])
-    return execute("python '%s'" % prog,opts,pyenv,stdout=stdout,stderr=stderr)
-
+            
 class Iteration:
     def __init__(self,prog,opts):
         self.prog,self.opts = prog,opts
@@ -230,8 +45,6 @@ class Iteration:
         self.opts.append(("mapper","%s %s map %i" % (python,progincmd,iter)))
         self.opts.append(("reducer","%s %s red %i" % (python,progincmd,iter)))
         return 0
-        #if not addedopts["hadoop"]: return startonunix(prog,opts,python)
-        #else: return startonstreaming(prog,opts,addedopts["hadoop"][0])
    
 class UnixIteration(Iteration):
     def __init__(self,prog,opts):
@@ -368,7 +181,196 @@ class StreamingIteration(Iteration):
             for key,value in self.opts:
                 if key == "input":
                     execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,value))
-        return retval
+        return retvalw
+
+class Counter:
+    def __init__(self,name,group="Program"):
+        self.group = group
+        self.name = name
+    def incr(self,amount):
+        incrcounter(self.group,self.name,amount)
+        
+
+def run(mapper,reducer=None,combiner=None,
+        mapconf=None,redconf=None,mapclose=None,redclose=None,
+        iter=0,newopts={}):
+    if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
+        try:
+            regex = re.compile(".*\.egg")
+            for eggfile in filter(regex.match,os.listdir(".")):
+                sys.path.append(eggfile)  # add eggs in current dir to path
+        except: pass
+        if type(mapper) == types.ClassType:
+            if hasattr(mapper,'map'): mapper = mapper().map
+            else: mapper = mapper()
+        if type(reducer) == types.ClassType:
+            if hasattr(reducer,'reduce'): reducer = reducer().reduce
+            else: reducer = reducer()
+        if type(combiner) == types.ClassType:
+            if hasattr(combiner,'reduce'): combiner = combiner().reduce
+            else: combiner = combiner()
+        iterarg = 0  # default value
+        if len(sys.argv) > 2: iterarg = int(sys.argv[2])
+        if iterarg == iter:
+            inputs = loadcode(line[:-1] for line in sys.stdin)
+            if sys.argv[1].startswith("map"):
+                if mapconf: mapconf()
+                outputs = itermap(inputs,mapper)
+                if combiner: outputs = iterreduce(sorted(outputs),combiner)
+                if mapclose: mapclose()
+            elif reducer: 
+                if redconf: redconf()
+                outputs = iterreduce(inputs,reducer)
+                if redclose: redclose()
+            else: outputs = inputs
+            for output in dumpcode(outputs): print "\t".join(output)
+    else:
+        opts = parseargs(sys.argv[1:])
+        newopts["iteration"] = str(iter)
+        if not reducer: newopts["numreducetasks"] = "0"
+        key,delindexes = None,[]
+        for index,(key,value) in enumerate(opts):
+            if newopts.has_key(key): delindexes.append(index)
+        for delindex in reversed(delindexes): del opts[delindex]
+        opts += newopts.iteritems()
+        hadoopopt = getopts(opts,["hadoop"],delete=False)["hadoop"]
+        if hadoopopt: retval = StreamingIteration(sys.argv[0],opts).run()
+        else: retval = UnixIteration(sys.argv[0],opts).run()
+        if retval == 127:
+            print >>sys.stderr,'ERROR: Are you sure that "python" is on your path?'
+        if retval != 0: sys.exit(retval)
+
+def identitymapper(key,value):
+    yield key,value
+
+def identityreducer(key,values):
+    for value in values: yield key,value
+    
+def sumreducer(key,values):
+    yield key,sum(values)
+
+def incrcounter(group,counter,amount):
+    print >>sys.stderr,"reporter:counter:%s,%s,%s" % (group,counter,amount)
+
+def setstatus(message):
+    print >>sys.stderr,"reporter:status:%s" % message
+    
+def itermap(data,mapfunc):
+    for key,value in data: 
+        for output in mapfunc(key,value): yield output
+
+def iterreduce(data,redfunc):
+    for key,values in groupby(data,itemgetter(0)):
+        for output in redfunc(key,(v[1] for v in values)): yield output
+
+def itermapred(data,mapfunc,redfunc):
+    return iterreduce(sorted(itermap(data,mapfunc)),redfunc)
+
+def dumpcode(outputs):
+    for output in outputs: yield map(repr,output)
+
+def loadcode(inputs):
+    for input in inputs:
+        try: yield map(eval,input.split("\t",1))
+        except:
+            if os.environ.has_key("debug"): raise
+            print >>sys.stderr,"WARNING: skipping bad input (%s)" % input
+            incrcounter("Dumbo","Bad inputs",1)
+
+def dumptext(outputs):
+    newoutput = []
+    for output in outputs:
+        for item in output:
+            if not hasattr(item,"__iter__"): newoutput.append(str(item))
+            else: newoutput.append("\t".join(map(str,item)))
+        yield newoutput
+        del newoutput[:]
+
+def loadtext(inputs):
+    offset = 0
+    for input in inputs: 
+        yield (offset,input)
+        offset += len(input)    
+
+def parseargs(args):
+    opts,key,values = [],None,[]
+    for arg in args:
+        if arg[0] == "-" and len(arg) > 1:
+            if key: opts.append((key," ".join(values)))
+            key,values = arg[1:],[]
+        else: values.append(arg)
+    if key: opts.append((key," ".join(values)))
+    return opts
+
+def getopts(opts,keys,delete=True):
+    askedopts = dict((key,[]) for key in keys)
+    key,delindexes = None,[]
+    for index,(key,value) in enumerate(opts):
+        key = key.lower()
+        if askedopts.has_key(key):
+            askedopts[key].append(value)
+            delindexes.append(index)
+    if delete:
+        for delindex in reversed(delindexes): del opts[delindex]
+    return askedopts
+
+def configopts(section,prog,opts=[]):
+    from ConfigParser import SafeConfigParser,NoSectionError
+    defaults = {'prog': prog.split("/")[-1].split(".py",1)[0]}
+    try: defaults.update([('user',os.environ["USER"]),('pwd',os.environ["PWD"])])
+    except KeyError: pass
+    for key,value in opts: defaults[key] = value
+    parser = SafeConfigParser(defaults)
+    parser.read(["/etc/dumbo.conf",os.environ["HOME"]+"/.dumborc"])
+    results,excludes = [],set(defaults.iterkeys())
+    try: 
+        for key,value in parser.items(section):
+            if not key in excludes: 
+                results.append((key.split("_",1)[0],value))
+    except NoSectionError: pass
+    return results
+
+def execute(cmd,opts=[],precmd="",printcmd=True,stdout=sys.stdout,stderr=sys.stderr):
+    if precmd: cmd = " ".join((precmd,cmd))
+    args = " ".join("-%s '%s'" % (key,value) for key,value in opts)
+    if args: cmd = " ".join((cmd,args))
+    if printcmd: print >>stderr,"EXEC:",cmd
+    return system(cmd,stdout,stderr)
+    
+def system(cmd,stdout=sys.stdout,stderr=sys.stderr):
+    if sys.version[:3] == "2.4": return os.system(cmd) / 256
+    proc = subprocess.Popen(cmd,shell=True,stdout=stdout,stderr=stderr)
+    return os.waitpid(proc.pid,0)[1] / 256
+
+def findjar(hadoop,name):
+    jardir = hadoop + "/build/contrib/" + name
+    if not os.path.exists(jardir): jardir = hadoop + "/contrib/" + name
+    if not os.path.exists(jardir): jardir = hadoop + "/contrib"
+    regex = re.compile("hadoop.*" + name + "\.jar")
+    try: return jardir + "/" + filter(regex.match,os.listdir(jardir))[-1]
+    except: return None
+
+def envdef(varname,files,optname=None,opts=None,commasep=False,shortcuts={}):
+    path,optvals="",[]
+    for file in files:
+        if shortcuts.has_key(file.lower()): file = shortcuts[file.lower()]
+        path += file + ":"
+        optvals.append(file)
+    if optname and optvals:
+        if not commasep: 
+            for optval in optvals: opts.append((optname,optval))
+        else: opts.append((optname,",".join(optvals)))
+    return '%s="%s$%s"' % (varname,path,varname)
+
+
+def start(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
+    addedopts = getopts(opts,["libegg"],delete=False)
+    pyenv = envdef("PYTHONPATH",addedopts["libegg"])
+    return execute("python '%s'" % prog,opts,pyenv,stdout=stdout,stderr=stderr)
+
+def submit(*args,**kwargs):
+    print >>sys.stderr,"WARNING: submit() is deprecated, use start() instead"
+    return start(*args,**kwargs)
 
 def cat(path,opts):
     addedopts = getopts(opts,["hadoop","type","libjar"])
@@ -421,16 +423,15 @@ def decodepipe(opts=[]):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "Usages:"
-        print "  python -m dumbo submit <python program> [<options>]"
         print "  python -m dumbo start <python program> [<options>]"
         print "  python -m dumbo cat <path> [<options>]"
         print "  python -m dumbo encodepipe [<options>]"
         print "  python -m dumbo decodepipe [<options>]"
         sys.exit(1)
-    if sys.argv[1] == "submit":
-        retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
-    elif sys.argv[1] == "start":
+    if sys.argv[1] == "start":
         retval = start(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "submit":
+        retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "cat":
         retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "encodepipe":
@@ -440,5 +441,5 @@ if __name__ == "__main__":
     else:
         print >>sys.stderr,"WARNING: the command 'python -m dumbo <prog>' is " \
                            "deprecated, use 'python <prog>' instead" 
-        retval = start(sys.argv[1],parseargs(sys.argv[1:]))  # for backwards compat
+        retval = start(sys.argv[1],parseargs(sys.argv[1:]))
     sys.exit(retval)

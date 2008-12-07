@@ -4,7 +4,7 @@ Counts how many times each non-excluded word occurs:
 >>> import dumbo
 >>> opts = [('input','brian.txt'),('output','counts.txt'),('inputformat','text')]
 >>> logfile = open('log.txt','a')
->>> dumbo.submit('oowordcount.py',opts,stdout=logfile,stderr=logfile)
+>>> dumbo.start('oowordcount.py',opts,stdout=logfile,stderr=logfile)
 0
 >>> output = dict(dumbo.loadcode(open('counts.txt')))
 >>> int(output['Brian'])
