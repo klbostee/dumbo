@@ -450,6 +450,34 @@ def cat(path,opts):
     except IOError: pass  # ignore
     return 0
 
+def ls(path,opts):
+    addedopts = getopts(opts,["hadoop"])
+    if not addedopts["hadoop"]: return execute("ls -l '%s'" % path,printcmd=False)
+    hadoop = findhadoop(addedopts["hadoop"][0])
+    return execute("%s/bin/hadoop dfs -ls '%s'" % (hadoop,path),printcmd=False)
+
+def rm(path,opts):
+    addedopts = getopts(opts,["hadoop"])
+    if not addedopts["hadoop"]: return execute("rm -rf '%s'" % path,printcmd=False)
+    hadoop = findhadoop(addedopts["hadoop"][0])
+    return execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,path),printcmd=False)
+
+def put(path1,path2,opts):
+    addedopts = getopts(opts,["hadoop"])
+    if not addedopts["hadoop"]: return execute("cp '%s' '%s'" % (path1,path2),
+                                               printcmd=False)
+    hadoop = findhadoop(addedopts["hadoop"][0])
+    return execute("%s/bin/hadoop dfs -put '%s' '%s'" % (hadoop,path1,path2),
+                   printcmd=False)
+    
+def get(path1,path2,opts):
+    addedopts = getopts(opts,["hadoop"])
+    if not addedopts["hadoop"]: return execute("cp '%s' '%s'" % (path1,path2),
+                                               printcmd=False)
+    hadoop = findhadoop(addedopts["hadoop"][0])
+    return execute("%s/bin/hadoop dfs -get '%s' '%s'" % (hadoop,path1,path2),
+                   printcmd=False)
+
 def encodepipe(opts=[]):
     addedopts = getopts(opts,["addpath","file","alreadycoded"])
     if addedopts["file"]: files = (open(f) for f in addedopts["file"])
@@ -479,6 +507,10 @@ if __name__ == "__main__":
         print "Usages:"
         print "  python -m dumbo start <python program> [<options>]"
         print "  python -m dumbo cat <path> [<options>]"
+        print "  python -m dumbo ls <path> [<options>]"
+        print "  python -m dumbo rm <path> [<options>]"
+        print "  python -m dumbo put <path1> <path2> [<options>]"
+        print "  python -m dumbo get <path1> <path2> [<options>]"
         print "  python -m dumbo encodepipe [<options>]"
         print "  python -m dumbo decodepipe [<options>]"
         print "  python -m dumbo modpath"
@@ -489,6 +521,14 @@ if __name__ == "__main__":
         retval = submit(sys.argv[2],parseargs(sys.argv[2:]))
     elif sys.argv[1] == "cat":
         retval = cat(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "ls":
+        retval = ls(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "rm":
+        retval = rm(sys.argv[2],parseargs(sys.argv[2:]))
+    elif sys.argv[1] == "put":
+        retval = put(sys.argv[2],sys.argv[3],parseargs(sys.argv[3:]))
+    elif sys.argv[1] == "get":
+        retval = get(sys.argv[2],sys.argv[3],parseargs(sys.argv[3:]))
     elif sys.argv[1] == "encodepipe":
         retval = encodepipe(parseargs(sys.argv[2:]))
     elif sys.argv[1] == "decodepipe":
