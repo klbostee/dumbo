@@ -3,8 +3,8 @@ import dumbo,unittest
 class TestCoding(unittest.TestCase):
 
     def dotest(self,data):
-        dumped = dumbo.dumpcode([[data]]).next()[0]
-        self.assertEqual(dumbo.loadcode([dumped]).next()[0],data)
+        dumped = "\t".join(dumbo.dumpcode([("dummy",data)]).next())
+        self.assertEqual(dumbo.loadcode([dumped]).next()[1],data)
 
     def testtuple(self):
         self.dotest(tuple())

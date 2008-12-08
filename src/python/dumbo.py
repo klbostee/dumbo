@@ -46,8 +46,8 @@ class Iteration:
         self.prog,self.opts = prog,opts
         self.opts += configopts("common",prog,self.opts)
     def run(self):
-        addedopts = getopts(self.opts,["fake","debug","python",
-                                       "iteration","hadoop","starter"])
+        addedopts = getopts(self.opts,["fake","debug","python","iteration",
+                                       "itercount","hadoop","starter","name"])
         if addedopts["fake"] and addedopts["fake"][0] == "yes":
             def dummysystem(*args,**kwargs): return 0
             global system
@@ -59,6 +59,11 @@ class Iteration:
         self.opts.append(("python",python))
         if not addedopts["iteration"]: iter = 0
         else: iter = int(addedopts["iteration"][0])
+        if not addedopts["itercount"]: itercnt = 0
+        else: itercnt = int(addedopts["itercount"][0])
+        if addedopts["name"]: name = addedopts["name"][0]
+        else: name = sys.argv[0].split("/")[-1]
+        self.opts.append(("name","%s (%s/%s)" % (name,iter+1,itercnt)))
         if not addedopts["hadoop"]: progincmd = self.prog
         else:
             self.opts.append(("hadoop",addedopts["hadoop"][0]))
@@ -261,16 +266,13 @@ def run(mapper,reducer=None,combiner=None,
     else:
         opts = parseargs(sys.argv[1:])
         newopts["iteration"] = str(iter)
+        newopts["itercount"] = str(itercnt)
         if not reducer: newopts["numreducetasks"] = "0"
         key,delindexes = None,[]
         for index,(key,value) in enumerate(opts):
             if newopts.has_key(key): delindexes.append(index)
         for delindex in reversed(delindexes): del opts[delindex]
         opts += newopts.iteritems()
-        nameopt = getopts(opts,["name"])["name"]
-        if nameopt: name = nameopt[0]
-        else: name = sys.argv[0].split("/")[-1]
-        opts.append(("name","%s (%s/%s)" % (name,iter+1,itercnt)))
         hadoopopt = getopts(opts,["hadoop"],delete=False)["hadoop"]
         if hadoopopt: retval = StreamingIteration(sys.argv[0],opts).run()
         else: retval = UnixIteration(sys.argv[0],opts).run()
@@ -310,7 +312,7 @@ def dumpcode(outputs):
 def loadcode(inputs):
     for input in inputs:
         try: yield map(eval,input.split("\t",1))
-        except:
+        except (ValueError,TypeError):
             if os.environ.has_key("debug"): raise
             print >>sys.stderr,"WARNING: skipping bad input (%s)" % input
             incrcounter("Dumbo","Bad inputs",1)
