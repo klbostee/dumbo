@@ -27,9 +27,9 @@ def runner(job):
     job.additer(Mapper,reducer,reducer)
 
 def starter(prog):
-    who = prog.delopt("who")
-    if not who: return "'who' not specified"
-    prog.addopt("input",who.lower() + ".txt")
+    opt = prog.delopt("who")
+    if not opt: return "'who' not specified"
+    prog.addopt("input",opt[0].lower() + ".txt")
     prog.addopt("inputformat","text")
 
 if __name__ == "__main__":

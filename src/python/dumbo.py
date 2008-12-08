@@ -24,14 +24,8 @@ class Program:
     def __init__(self,prog,opts=[]):
         self.prog,self.opts = prog,opts
     def addopt(self,key,value): self.opts.append((key,value))
-    def delopts(self,key): return getopts(self.opts,[key],delete=True)[key]
-    def delopt(self,key):
-        try: return self.delopts(key)[0]
-        except IndexError: return None
-    def getopts(self,key): return getopts(self.opts,[key],delete=False)[key]
-    def getopt(self,key):
-        try: return self.getopts(key)[0]
-        except IndexError: return None
+    def delopt(self,key): return getopts(self.opts,[key],delete=True)[key]
+    def getopt(self,key): return getopts(self.opts,[key],delete=False)[key]
     def start(self): return start(self.prog,self.opts)
 
 class Counter:
@@ -508,13 +502,6 @@ def decodepipe(opts=[]):
         file.close()
         return 0
 
-def doctest(prog):
-    import doctest
-    failures = doctest.testmod(__import__(prog[:-3]))
-    print "%s failures in %s tests" % failures
-    if failures > 0: return 1
-    else: return 0
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "Usages:"
@@ -526,7 +513,6 @@ if __name__ == "__main__":
         print "  python -m dumbo get <path1> <path2> [<options>]"
         print "  python -m dumbo encodepipe [<options>]"
         print "  python -m dumbo decodepipe [<options>]"
-        print "  python -m dumbo doctest <python program>"
         print "  python -m dumbo modpath"
         sys.exit(1)
     if sys.argv[1] == "start":
@@ -547,14 +533,9 @@ if __name__ == "__main__":
         retval = encodepipe(parseargs(sys.argv[2:]))
     elif sys.argv[1] == "decodepipe":
         retval = decodepipe(parseargs(sys.argv[2:]))
-    elif sys.argv[1] == "doctest":
-        retval = doctest(sys.argv[2])
     elif sys.argv[1] == "modpath":
         print sys.argv[0]
         retval = 0
-    elif sys.argv[1][0] != "-":
-        retval = start(sys.argv[1],parseargs(sys.argv[1:]))
     else:
-        print >>sys.stderr,"ERROR: unknown command"
-        retval = 1
+        retval = start(sys.argv[1],parseargs(sys.argv[1:]))
     sys.exit(retval)
