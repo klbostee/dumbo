@@ -1,6 +1,6 @@
 import sys,types,os,random,re,types,subprocess,urllib
 from itertools import groupby
-from operator import itemgetter
+from operator import itemgetter,concat
 
 class Job:
     def __init__(self): self.iters = []
@@ -87,7 +87,7 @@ class UnixIteration(Iteration):
         if (not addedopts["input"]) or (not addedopts["output"]):
             print >>sys.stderr,"ERROR: input or output not specified"
             return 1
-        inputs = addedopts["input"]
+        inputs = reduce(concat,(input.split(" ") for input in addedopts["input"]))
         output = addedopts["output"][0]
         pyenv = envdef("PYTHONPATH",addedopts["libegg"],
                        shortcuts=dict(configopts("eggs",self.prog)))
@@ -99,7 +99,7 @@ class UnixIteration(Iteration):
         else: mpv,spv,rpv = "","",""
         python = addedopts["python"][0]
         encodepipe = python + " -m dumbo encodepipe -file " + " -file ".join(inputs)
-        if addedopts["inputformat"] and addedopts["inputformat"][0] != "text":
+        if not (addedopts["inputformat"] and addedopts["inputformat"][0] == "text"):
             encodepipe += " -alreadycoded yes"
         if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
             encodepipe += " -addpath yes"
@@ -434,6 +434,7 @@ def submit(*args,**kwargs):
     return start(*args,**kwargs)
 
 def cat(path,opts):
+    opts += configopts("cat")
     addedopts = getopts(opts,["hadoop","type","libjar"])
     if not addedopts["hadoop"]: return decodepipe(opts + [("file",path)])
     hadoop = findhadoop(addedopts["hadoop"][0])
@@ -459,18 +460,21 @@ def cat(path,opts):
     return 0
 
 def ls(path,opts):
+    opts += configopts("ls")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("ls -l '%s'" % path,printcmd=False)
     hadoop = findhadoop(addedopts["hadoop"][0])
     return execute("%s/bin/hadoop dfs -ls '%s'" % (hadoop,path),printcmd=False)
 
 def rm(path,opts):
+    opts += configopts("rm")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("rm -rf '%s'" % path,printcmd=False)
     hadoop = findhadoop(addedopts["hadoop"][0])
     return execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,path),printcmd=False)
 
 def put(path1,path2,opts):
+    opts += configopts("put")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("cp '%s' '%s'" % (path1,path2),
                                                printcmd=False)
@@ -479,6 +483,7 @@ def put(path1,path2,opts):
                    printcmd=False)
     
 def get(path1,path2,opts):
+    opts += configopts("get")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("cp '%s' '%s'" % (path1,path2),
                                                printcmd=False)
