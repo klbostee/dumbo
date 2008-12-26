@@ -10,27 +10,21 @@ to be a convenient Python API for writing MapReduce programs.
 INSTALLATION
 """"""""""""
 
-The Java code gets build together with the rest of Hadoop when the 
-"dumbo/" directory is put in Hadoop's "src/contrib/", and the Python 
-module can be installed by running
-
-sudo ant -f build-pymod.xml install_pymod
-
-in the "src/contrib/dumbo" directory. If the dir "dumbo/" is a subdir
-of Hadoop's "src/contrib/", then the -f option can be omitted:
-
-sudo ant install_pymod
+Dumbo should get built together with the rest of Hadoop when the 
+"dumbo/" directory is put in Hadoop's "src/contrib/" directory. More
+precisely, a "build/hadoop-*/contrib/dumbo/" directory should be
+generated when you run "ant package" in Hadoop's root directory.
 
 
 USAGE
 """""
 
-/usr/local/hadoop/bin/hadoop dfs -put examples/brian.txt brian.txt
+contrib/dumbo/bin/put examples/brian.txt brian.txt
 
-python examples/wordcount.py -hadoop /path/to/hadoop \
--file excludes.txt -input brian.txt -output brian-wc
+contrib/dumbo/bin/start examples/wordcount.py \
+-input brian.txt -output brian-wc -inputformat text
 
-python -m dumbo cat brian-wc > brian-wc.txt
+contrib/dumbo/bin/cat brian-wc > brian-wc.txt
 
 
 MORE INFO

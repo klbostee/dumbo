@@ -1,0 +1,10 @@
+#!/bin/sh
+
+DUMBODIR="`dirname $0`/.."
+
+$DUMBODIR/bin/put $DUMBODIR/examples/brian.txt brian.txt
+
+$DUMBODIR/bin/start $DUMBODIR/examples/wordcount.py \
+-input brian.txt -output brian-wc -inputformat text
+
+$DUMBODIR/bin/cat brian-wc
