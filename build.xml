@@ -38,4 +38,27 @@ to call at top-level: ant deploy-contrib compile-core-test
     </jar>
   </target>
 
+  <!-- Override package target to include bin and examples -->
+  <target name="package" depends="jar, jar-examples" unless="skip.contrib">
+    <mkdir dir="${dist.dir}/contrib/${name}"/>
+    <mkdir dir="${dist.dir}/contrib/${name}/lib"/>
+    <copy todir="${dist.dir}/contrib/${name}/lib">
+      <fileset dir="${build.dir}">
+        <include name="hadoop-${version}-${name}.jar"/>
+      </fileset>
+      <fileset dir="${basedir}/src/python">
+        <include name="dumbo.py"/>
+      </fileset>
+    </copy>
+    <mkdir dir="${dist.dir}/contrib/${name}/bin"/>
+    <copy todir="${dist.dir}/contrib/${name}/bin">
+      <fileset dir="${basedir}/bin"/>
+    </copy>
+    <chmod dir="${dist.dir}/contrib/${name}/bin" perm="a+x" includes="*"/>
+    <mkdir dir="${dist.dir}/contrib/${name}/examples"/>
+    <copy todir="${dist.dir}/contrib/${name}/examples">
+      <fileset dir="${basedir}/examples"/>
+    </copy>
+  </target>
+
 </project>

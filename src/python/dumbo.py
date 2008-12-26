@@ -403,6 +403,7 @@ def findhadoop(optval):
 
 def findjar(hadoop,name):
     jardir = hadoop + "/build/contrib/" + name
+    if not os.path.exists(jardir): jardir = hadoop + "/contrib/" + name + "/lib"
     if not os.path.exists(jardir): jardir = hadoop + "/contrib/" + name
     if not os.path.exists(jardir): jardir = hadoop + "/contrib"
     regex = re.compile("hadoop.*" + name + "\.jar")
