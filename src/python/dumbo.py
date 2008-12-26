@@ -197,8 +197,10 @@ class StreamingIteration(Iteration):
                               "org.apache.hadoop.streaming.PipeMapper"))
         if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
             self.opts.append(("jobconf", "dumbo.as.named.code=true"))
-        envdef("PYTHONPATH",addedopts["libegg"],"file",self.opts,
-               shortcuts=dict(configopts("eggs",self.prog)))
+        pyenv = envdef("PYTHONPATH",addedopts["libegg"],"file",self.opts,
+                       shortcuts=dict(configopts("eggs",self.prog)),
+                       quote=False,trim=True)
+        if pyenv: self.opts.append(("cmdenv",pyenv))
         hadenv = envdef("HADOOP_CLASSPATH",addedopts["libjar"],"file",self.opts,
                         shortcuts=dict(configopts("jars",self.prog))) 
         cmd = hadoop + "/bin/hadoop jar " + streamingjar
@@ -234,11 +236,6 @@ def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,mapclose=None,redclose=None,
         iter=0,itercnt=1,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
-        try:
-            regex = re.compile(".*\.egg")
-            for eggfile in filter(regex.match,os.listdir(".")):
-                sys.path.append(eggfile)  # add eggs in current dir to path
-        except: pass
         if type(mapper) == types.ClassType:
             if hasattr(mapper,'map'): mapper = mapper().map
             else: mapper = mapper()
@@ -410,17 +407,20 @@ def findjar(hadoop,name):
     try: return jardir + "/" + filter(regex.match,os.listdir(jardir))[-1]
     except: return None
 
-def envdef(varname,files,optname=None,opts=None,commasep=False,shortcuts={}):
-    path,optvals="",[]
+def envdef(varname,files,optname=None,opts=None,commasep=False,shortcuts={},
+           quote=True,trim=False):
+    optvals=[]
     for file in files:
         if shortcuts.has_key(file.lower()): file = shortcuts[file.lower()]
-        path += file + ":"
         optvals.append(file)
+    if not trim: path = ":".join(optvals)
+    else: path = ":".join(optval.split("/")[-1] for optval in optvals)
     if optname and optvals:
         if not commasep: 
             for optval in optvals: opts.append((optname,optval))
         else: opts.append((optname,",".join(optvals)))
-    return '%s="%s$%s"' % (varname,path,varname)
+    if not quote: return "%s=%s" % (varname,path) 
+    else: return '%s="%s"' % (varname,":".join((path,"$"+varname)))
 
 
 def start(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
