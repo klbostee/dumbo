@@ -2,7 +2,7 @@
 Example of two iterations in one Dumbo program:
 
 >>> import dumbo
->>> opts = [('input','brian.txt'),('output','counts.txt'),('inputformat','text')]
+>>> opts = [('input','brian.txt'),('output','counts.txt')]
 >>> logfile = open('log.txt','a')
 >>> dumbo.start('itertwice.py',opts,stdout=logfile,stderr=logfile)
 0

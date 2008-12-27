@@ -30,7 +30,6 @@ def starter(prog):
     who = prog.delopt("who")
     if not who: return "'who' not specified"
     prog.addopt("input",who.lower() + ".txt")
-    prog.addopt("inputformat","text")
 
 if __name__ == "__main__":
     import dumbo
