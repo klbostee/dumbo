@@ -12,10 +12,10 @@ class Job:
             if index != 0: 
                 newopts["input"] = "%s-%i" % (scratch,index-1)
                 newopts["delinputs"] = "yes"
-                newopts["inputformat"] = "sequencefile"
+                newopts["inputformat"] = "code"
             if index != len(self.iters)-1:
                 newopts["output"] = "%s-%i" % (scratch,index)
-                newopts["outputformat"] = "sequencefile"
+                newopts["outputformat"] = "code"
             kwargs["iter"],kwargs["itercnt"] = index,len(self.iters)
             kwargs["newopts"] = newopts
             run(*args,**kwargs)
@@ -84,8 +84,8 @@ class UnixIteration(Iteration):
                                        "addpath","inputformat","outputformat",
                                        "numreducetasks","python"])
         mapper,reducer = addedopts["mapper"][0],addedopts["reducer"][0]
-        if (not addedopts["input"]) or (not addedopts["output"]):
-            print >>sys.stderr,"ERROR: input or output not specified"
+        if not addedopts["output"]:
+            print >>sys.stderr,"ERROR: output not specified"
             return 1
         inputs = reduce(concat,(input.split(" ") for input in addedopts["input"]))
         output = addedopts["output"][0]
@@ -99,7 +99,7 @@ class UnixIteration(Iteration):
         else: mpv,spv,rpv = "","",""
         python = addedopts["python"][0]
         encodepipe = python + " -m dumbo encodepipe -file " + " -file ".join(inputs)
-        if not (addedopts["inputformat"] and addedopts["inputformat"][0] == "text"):
+        if addedopts["inputformat"] and addedopts["inputformat"][0] == "code":
             encodepipe += " -alreadycoded yes"
         if addedopts["addpath"] and addedopts["addpath"][0] == 'yes':
             encodepipe += " -addpath yes"
@@ -161,8 +161,9 @@ class StreamingIteration(Iteration):
                                                      addedopts["cachefile"][0]))
         if addedopts["cachearchive"]: self.opts.append(("cacheArchive",
                                                         addedopts["cachearchive"][0]))
-        if not addedopts["inputformat"]: addedopts["inputformat"] = ["sequencefile"] 
+        if not addedopts["inputformat"]: addedopts["inputformat"] = ["auto"] 
         inputformat_shortcuts = {
+            "code": dumbopkg + ".SequenceFileAsCodeInputFormat",
             "text": dumbopkg + ".TextAsCodeInputFormat", 
             "sequencefile": dumbopkg + ".SequenceFileAsCodeInputFormat",
             "auto": dumbopkg + ".AutoAsCodeInputFormat"}
@@ -177,6 +178,7 @@ class StreamingIteration(Iteration):
             self.opts.append(("inputformat",dumbopkg + ".AsCodeInputFormat"))
         if not addedopts["outputformat"]: addedopts["outputformat"] = ["sequencefile"] 
         outputformat_shortcuts = {
+            "code": "org.apache.hadoop.mapred.SequenceFileOutputFormat",
             "sequencefile": "org.apache.hadoop.mapred.SequenceFileOutputFormat"}
         outputformat_shortcuts.update(configopts("outputformats",self.prog))
         outputformat = addedopts["outputformat"][0]
@@ -436,7 +438,7 @@ def submit(*args,**kwargs):
 
 def cat(path,opts):
     opts += configopts("cat")
-    addedopts = getopts(opts,["hadoop","type","libjar"])
+    addedopts = getopts(opts,["hadoop","type","libjar","ascode"])
     if not addedopts["hadoop"]: return decodepipe(opts + [("file",path)])
     hadoop = findhadoop(addedopts["hadoop"][0])
     dumbojar = findjar(hadoop,"dumbo")
@@ -453,7 +455,9 @@ def cat(path,opts):
         else: codetype = "sequencefileascode"
         process = os.popen("%s %s/bin/hadoop jar %s catpath %s %s" % \
             (hadenv,hadoop,dumbojar,codetype,path))    
-        if type[-6:] == "ascode": outputs = dumpcode(loadcode(process))
+        if type[-6:] == "ascode" or \
+           (addedopts["ascode"] and addedopts["ascode"][0] == "yes"): 
+            outputs = dumpcode(loadcode(process))
         else: outputs = dumptext(loadcode(process))
         for output in outputs: print "\t".join(output)
         process.close()
