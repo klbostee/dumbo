@@ -426,6 +426,8 @@ def envdef(varname,files,optname=None,opts=None,commasep=False,shortcuts={},
 
 
 def start(prog,opts,stdout=sys.stdout,stderr=sys.stderr):
+    opts += configopts("common")
+    opts += configopts("start")
     addedopts = getopts(opts,["libegg"],delete=False)
     pyenv = envdef("PYTHONPATH",addedopts["libegg"],
                    shortcuts=dict(configopts("eggs",prog)))
@@ -437,6 +439,7 @@ def submit(*args,**kwargs):
     return start(*args,**kwargs)
 
 def cat(path,opts):
+    opts += configopts("common")
     opts += configopts("cat")
     addedopts = getopts(opts,["hadoop","type","libjar","ascode"])
     if not addedopts["hadoop"]: return decodepipe(opts + [("file",path)])
@@ -465,6 +468,7 @@ def cat(path,opts):
     return 0
 
 def ls(path,opts):
+    opts += configopts("common")
     opts += configopts("ls")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("ls -l '%s'" % path,printcmd=False)
@@ -472,6 +476,7 @@ def ls(path,opts):
     return execute("%s/bin/hadoop dfs -ls '%s'" % (hadoop,path),printcmd=False)
 
 def rm(path,opts):
+    opts += configopts("common")
     opts += configopts("rm")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("rm -rf '%s'" % path,printcmd=False)
@@ -479,6 +484,7 @@ def rm(path,opts):
     return execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop,path),printcmd=False)
 
 def put(path1,path2,opts):
+    opts += configopts("common")
     opts += configopts("put")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("cp '%s' '%s'" % (path1,path2),
@@ -488,6 +494,7 @@ def put(path1,path2,opts):
                    printcmd=False)
     
 def get(path1,path2,opts):
+    opts += configopts("common")
     opts += configopts("get")
     addedopts = getopts(opts,["hadoop"])
     if not addedopts["hadoop"]: return execute("cp '%s' '%s'" % (path1,path2),
