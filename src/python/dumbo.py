@@ -44,7 +44,6 @@ class Counter:
 class Iteration:
     def __init__(self,prog,opts):
         self.prog,self.opts = prog,opts
-        self.opts += configopts("common",prog,self.opts)
     def run(self):
         addedopts = getopts(self.opts,["fake","debug","python","iteration",
                                        "itercount","hadoop","starter","name"])
