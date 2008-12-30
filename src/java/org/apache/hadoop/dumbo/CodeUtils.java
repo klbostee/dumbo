@@ -156,7 +156,7 @@ public abstract class CodeUtils {
 
   private static String[] findSubcodes(String code) {
     List<String> codes = new ArrayList<String>();
-    boolean inStr = false;
+    boolean inStr = false, inBrackets = false, inSquareBrackets = false;
     char strChar = 0, prevChar = 0;
     int prevIndex = 1; 
     for (int i = 1; i < code.length()-1; i++) {
@@ -165,7 +165,13 @@ public abstract class CodeUtils {
         inStr = !inStr;
         strChar = c;
       }
-      else if (!inStr && (c == ',' || c == ':')) {
+      else if (!inStr && (c == '(' || c == ')') && (!inBrackets || c == ')')) {
+        inBrackets = !inBrackets;
+      }
+      else if (!inStr && (c == '[' || c == ']') && (!inSquareBrackets || c == ']')) {
+        inSquareBrackets = !inSquareBrackets;
+      }
+      else if (!inStr && !inBrackets && !inSquareBrackets && (c == ',' || c == ':')) {
         codes.add(code.substring(prevIndex, i).trim());
         prevIndex = i+1;
       }
