@@ -237,18 +237,19 @@ def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,mapclose=None,redclose=None,
         iter=0,itercnt=1,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
-        if type(mapper) == types.ClassType:
-            if hasattr(mapper,'map'): mapper = mapper().map
-            else: mapper = mapper()
-        if type(reducer) == types.ClassType:
-            if hasattr(reducer,'reduce'): reducer = reducer().reduce
-            else: reducer = reducer()
-        if type(combiner) == types.ClassType:
-            if hasattr(combiner,'reduce'): combiner = combiner().reduce
-            else: combiner = combiner()
+        
         iterarg = 0  # default value
         if len(sys.argv) > 2: iterarg = int(sys.argv[2])
         if iterarg == iter:
+            if type(mapper) == types.ClassType:
+                if hasattr(mapper,'map'): mapper = mapper().map
+                else: mapper = mapper()
+            if type(reducer) == types.ClassType:
+                if hasattr(reducer,'reduce'): reducer = reducer().reduce
+                else: reducer = reducer()
+            if type(combiner) == types.ClassType:
+                if hasattr(combiner,'reduce'): combiner = combiner().reduce
+                else: combiner = combiner()
             inputs = loadcode(line[:-1] for line in sys.stdin)
             if sys.argv[1].startswith("map"):
                 if mapconf: mapconf()
