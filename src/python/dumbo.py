@@ -156,10 +156,12 @@ class StreamingIteration(Iteration):
         if addedopts["priority"]:
             self.opts.append(("jobconf",
                               "mapred.job.priority=%s" % addedopts["priority"][0]))
-        if addedopts["cachefile"]: self.opts.append(("cacheFile",
-                                                     addedopts["cachefile"][0]))
-        if addedopts["cachearchive"]: self.opts.append(("cacheArchive",
-                                                        addedopts["cachearchive"][0]))
+        if addedopts["cachefile"]: 
+            for cachefile in addedopts["cachefile"]:
+                self.opts.append(("cacheFile",cachefile))
+        if addedopts["cachearchive"]:
+            for cachearchive in addedopts["cachearchive"]:
+                self.opts.append(("cacheArchive",cachearchive))
         if not addedopts["inputformat"]: addedopts["inputformat"] = ["auto"] 
         inputformat_shortcuts = {
             "code": dumbopkg + ".SequenceFileAsCodeInputFormat",
