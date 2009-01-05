@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='dumbo',
-      version='0.20.14',
+      version='0.20.15',
       py_modules=['dumbo'],
       author='Klaas Bosteels',
       author_email='klaas@last.fm',
