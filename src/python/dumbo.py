@@ -1,4 +1,4 @@
-import sys,types,os,random,re,types,subprocess,urllib
+import sys,types,os,random,re,types,subprocess,urllib,resource
 from itertools import groupby
 from operator import itemgetter,concat
 
@@ -46,7 +46,8 @@ class Iteration:
         self.prog,self.opts = prog,opts
     def run(self):
         addedopts = getopts(self.opts,["fake","debug","python","iteration",
-                                       "itercount","hadoop","starter","name"])
+                                       "itercount","hadoop","starter","name",
+                                       "memlimit"])
         if addedopts["fake"] and addedopts["fake"][0] == "yes":
             def dummysystem(*args,**kwargs): return 0
             global system
@@ -67,8 +68,10 @@ class Iteration:
         else:
             self.opts.append(("hadoop",addedopts["hadoop"][0]))
             progincmd = self.prog.split("/")[-1]
-        self.opts.append(("mapper","%s %s map %i" % (python,progincmd,iter)))
-        self.opts.append(("reducer","%s %s red %i" % (python,progincmd,iter)))
+        memlim = ""
+        if addedopts["memlimit"]: memlim = " " + addedopts["memlimit"][0]
+        self.opts.append(("mapper","%s %s map %i%s" % (python,progincmd,iter,memlim)))
+        self.opts.append(("reducer","%s %s red %i%s" % (python,progincmd,iter,memlim)))
         return 0
    
 class UnixIteration(Iteration):
@@ -239,9 +242,11 @@ def run(mapper,reducer=None,combiner=None,
         mapconf=None,redconf=None,mapclose=None,redclose=None,
         iter=0,itercnt=1,newopts={}):
     if len(sys.argv) > 1 and not sys.argv[1][0] == "-":
-        
         iterarg = 0  # default value
         if len(sys.argv) > 2: iterarg = int(sys.argv[2])
+        if len(sys.argv) > 3:
+            lim = int(sys.argv[3])  # memory limit
+            resource.setrlimit(resource.RLIMIT_AS,(lim,lim))
         if iterarg == iter:
             if type(mapper) == types.ClassType:
                 if hasattr(mapper,'map'): mapper = mapper().map
