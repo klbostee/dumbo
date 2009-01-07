@@ -188,6 +188,12 @@ public abstract class CodeUtils {
     char first = code.charAt(0);
     if (code.equals(NULL_CODE)) {
       return CodeType.NULL;
+    } else if (Character.isDigit(code.charAt(0))) {
+      if (code.contains(".")) {
+        return CodeType.FLOAT;
+      } else if (code.charAt(code.length()-1) == 'L') {
+        return CodeType.LONG;
+      } else return CodeType.INTEGER;
     } else if (code.equals("True") || code.equals("False")) {
       return CodeType.BOOLEAN;
     } else if (first == '\'' || first == '"') {
@@ -198,12 +204,6 @@ public abstract class CodeUtils {
       return CodeType.LIST;
     } else if (first == '{') {
       return CodeType.DICTIONARY;
-    } else if (code.contains(".")) {
-      return CodeType.FLOAT;
-    } else if (code.charAt(code.length()-1) == 'L') {
-      return CodeType.LONG;
-    } else if (Character.isDigit(code.charAt(0))) {
-      return CodeType.INTEGER;
     } else return CodeType.OTHER;
   }
 
