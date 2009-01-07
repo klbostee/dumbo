@@ -544,16 +544,16 @@ def doctest(prog):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "Usages:"
-        print "  python -m dumbo start <python program> [<options>]"
-        print "  python -m dumbo cat <path> [<options>]"
-        print "  python -m dumbo ls <path> [<options>]"
-        print "  python -m dumbo rm <path> [<options>]"
-        print "  python -m dumbo put <path1> <path2> [<options>]"
-        print "  python -m dumbo get <path1> <path2> [<options>]"
-        print "  python -m dumbo encodepipe [<options>]"
-        print "  python -m dumbo decodepipe [<options>]"
-        print "  python -m dumbo doctest <python program>"
-        print "  python -m dumbo modpath"
+        print "  dumbo start <python program> [<options>]"
+        print "  dumbo cat <path> [<options>]"
+        print "  dumbo ls <path> [<options>]"
+        print "  dumbo rm <path> [<options>]"
+        print "  dumbo put <path1> <path2> [<options>]"
+        print "  dumbo get <path1> <path2> [<options>]"
+        print "  dumbo encodepipe [<options>]"
+        print "  dumbo decodepipe [<options>]"
+        print "  dumbo doctest <python program>"
+        print "  dumbo modpath"
         sys.exit(1)
     if sys.argv[1] == "start":
         retval = start(sys.argv[2],parseargs(sys.argv[2:]))
