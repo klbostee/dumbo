@@ -366,13 +366,13 @@ def configopts(section,prog=None,opts=[]):
     else: defaults = {}
     try: defaults.update([('user',os.environ["USER"]),('pwd',os.environ["PWD"])])
     except KeyError: pass
-    for key,value in opts: defaults[key] = value
+    for key,value in opts: defaults[key.lower()] = value
     parser = SafeConfigParser(defaults)
     parser.read(["/etc/dumbo.conf",os.environ["HOME"]+"/.dumborc"])
     results,excludes = [],set(defaults.iterkeys())
     try: 
         for key,value in parser.items(section):
-            if not key in excludes: 
+            if not key.lower() in excludes: 
                 results.append((key.split("_",1)[0],value))
     except NoSectionError: pass
     return results
