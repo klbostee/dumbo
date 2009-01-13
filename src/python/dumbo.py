@@ -581,6 +581,6 @@ if __name__ == "__main__":
     elif sys.argv[1][0] != "-":
         retval = start(sys.argv[1],parseargs(sys.argv[1:]))
     else:
-        print >>sys.stderr,"ERROR: unknown command"
+        print >>sys.stderr,"ERROR: unknown dumbo command:",sys.argv[1] 
         retval = 1
     sys.exit(retval)
