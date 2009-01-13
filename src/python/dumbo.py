@@ -155,8 +155,8 @@ class UnixIteration(Iteration):
                                         'numreducetasks',
                                         'python'])
         (mapper, reducer) = (addedopts['mapper'][0], addedopts['reducer'][0])
-        if not addedopts['output']:
-            print >> sys.stderr, 'ERROR: output not specified'
+        if not addedopts['input'] or not addedopts['output']:
+            print >> sys.stderr, 'ERROR: input or output not specified'
             return 1
         inputs = reduce(concat, (input.split(' ') for input in
                         addedopts['input']))
