@@ -577,12 +577,7 @@ def system(cmd, stdout=sys.stdout, stderr=sys.stderr):
 
 
 def findmodpath():
-    python = '/usr/bin/python2.5'
-    if not os.path.exists(python):
-        python = '/usr/bin/python'
-    if not os.path.exists(python):
-        python = 'python'
-    process = os.popen(python + ' -m dumbo modpath')
+    process = os.popen(sys.executable + ' -m dumbo modpath')
     modpath = process.readlines()[0].strip()
     process.close()
     return modpath
@@ -651,7 +646,7 @@ def start(prog,
     addedopts = getopts(opts, ['libegg'], delete=False)
     pyenv = envdef('PYTHONPATH', addedopts['libegg'],
                    shortcuts=dict(configopts('eggs', prog)))
-    return execute("python '%s'" % prog,
+    return execute("%s '%s'" % (sys.executable, prog),
                    opts,
                    pyenv,
                    stdout=stdout,
@@ -825,7 +820,7 @@ if __name__ == '__main__':
     elif sys.argv[1] == 'modpath':
         print sys.argv[0]
         retval = 0
-    elif sys.argv[1][0] != '-':
+    elif sys.argv[1].endswith(".py"):
         retval = start(sys.argv[1], parseargs(sys.argv[1:]))
     else:
         print >> sys.stderr, 'ERROR: unknown dumbo command:', sys.argv[1]
