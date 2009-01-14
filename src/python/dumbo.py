@@ -1,3 +1,9 @@
+"""
+The Dumbo Python module. 
+
+Please refer to http://wiki.github.com/klbostee/dumbo for more info.
+"""
+
 import sys
 import types
 import os
