@@ -360,6 +360,7 @@ def main(runner, starter=None):
 def run(mapper,
         reducer=None,
         combiner=None,
+        buffersize=None,
         mapconf=None,
         redconf=None,
         mapclose=None,
@@ -396,7 +397,7 @@ def run(mapper,
                     mapconf()
                 outputs = itermap(inputs, mapper)
                 if combiner:
-                    outputs = iterreduce(sorted(outputs), combiner)
+                    outputs = iterreduce(sorted(outputs, buffersize), combiner)
                 if mapclose:
                     mapclose()
             elif reducer:
@@ -470,6 +471,23 @@ def itermapred(data, mapfunc, redfunc):
     return iterreduce(sorted(itermap(data, mapfunc)), redfunc)
 
 
+def sorted(iterable, piecesize=None, key=None, reverse=False):
+    if not piecesize:
+        values = list(iterable)
+        values.sort(key=key, reverse=reverse)
+        for value in values:
+            yield value
+    else:  # piecewise sorted
+        sequence = iter(iterable)
+        while True:
+            values = list(sequence.next() for i in xrange(piecesize))
+            values.sort(key=key, reverse=reverse)
+            for value in values:
+                yield value
+            if len(values) < piecesize:
+                break
+            
+            
 def dumpcode(outputs):
     for output in outputs:
         yield map(repr, output)
