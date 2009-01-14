@@ -33,6 +33,7 @@ class Job:
                 newopts['input'] = '%s-%i' % (scratch, index - 1)
                 newopts['delinputs'] = 'yes'
                 newopts['inputformat'] = 'code'
+                newopts['addpath'] = 'no'
             if index != len(self.iters) - 1:
                 newopts['output'] = '%s-%i' % (scratch, index)
                 newopts['outputformat'] = 'code'
