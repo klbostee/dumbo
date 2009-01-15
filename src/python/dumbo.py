@@ -465,11 +465,11 @@ def statsreducer(key, values):
     columns = izip(*values)
     s0 = sum(columns.next())
     column = columns.next()
-    (s1, lower, upper) = (sum(column), min(column), max(column))
+    (s1, minimum, maximum) = (sum(column), min(column), max(column))
     s2 = sum(columns.next())
     mean = float(s1) / s0
     std = sqrt(s0 * s2 - s1**2) / s0
-    yield (key, (mean, std, lower, upper))
+    yield (key, (mean, std, minimum, maximum))
 
 
 def incrcounter(group, counter, amount):
