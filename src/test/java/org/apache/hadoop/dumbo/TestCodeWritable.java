@@ -71,6 +71,7 @@ public class TestCodeWritable extends TestCase {
     testCode("('test','paul\\'s, mine, and yours')");
     testCode("('test',\"paul's, mine, and yours\")","('test','paul\\'s, mine, and yours')");
     testCode("([(1,2),(3,4)],[(5,6),(7,8)],(9,10),(11,12),13)");
+    testCode("(1,)", false);
   }
 
   public void testRest() throws Exception {

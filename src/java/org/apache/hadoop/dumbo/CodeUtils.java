@@ -185,6 +185,9 @@ public abstract class CodeUtils {
 
 
   public static CodeType deriveType(String code) {
+    if (code.length() == 0) {
+      return CodeType.OTHER;
+    }
     char first = code.charAt(0);
     if (code.equals(NULL_CODE)) {
       return CodeType.NULL;
