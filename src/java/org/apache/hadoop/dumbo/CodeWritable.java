@@ -61,7 +61,7 @@ public class CodeWritable implements WritableComparable {
       writeString(out, CodeUtils.codeToString(code));
     } else if (type == CodeType.BOOLEAN) {
       out.writeBoolean(CodeUtils.codeToBoolean(code));
-    } else if ((type == CodeType.INTEGER) || (type == CodeType.LONG))  {
+    } else if (type == CodeType.INTEGER) {
       WritableUtils.writeVLong(out, CodeUtils.codeToLong(code));
     } else if (type == CodeType.FLOAT) {
       out.writeFloat(CodeUtils.codeToFloat(code));
@@ -82,7 +82,7 @@ public class CodeWritable implements WritableComparable {
       code = CodeUtils.stringToCode(readString(in));
     } else if (type == CodeType.BOOLEAN.ordinal()) {
       code = CodeUtils.booleanToCode(in.readBoolean());
-    } else if ((type == CodeType.INTEGER.ordinal()) || (type == CodeType.LONG.ordinal())) {
+    } else if (type == CodeType.INTEGER.ordinal()) {
       code = CodeUtils.longToCode(WritableUtils.readVLong(in));
     } else if (type == CodeType.FLOAT.ordinal()) {
       code = new Float(in.readFloat()).toString();

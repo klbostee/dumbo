@@ -19,6 +19,7 @@
 package org.apache.hadoop.dumbo;
 
 import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,6 +69,10 @@ public abstract class CodeUtils {
   public static String doubleToCode(double d) {
     return numberToCode(d);
   }
+  
+  public static String bigIntToCode(BigInteger i) {
+    return numberToCode(i);
+  }
 
   private static String numberToCode(Number n) {
     return n.toString();
@@ -78,11 +83,11 @@ public abstract class CodeUtils {
   }
 
   public static long codeToLong(String code) {
-    int lastIndex = code.length() - 1;
-    if (code.charAt(lastIndex) == 'L')
-      return Long.parseLong(code.substring(0, code.length()-1));
-    else
-      return Long.parseLong(code);
+    return Long.parseLong(code);
+  }
+  
+  public static BigInteger codeToBigInteger(String code) {
+    return new BigInteger(code.substring(0, code.length()-1));
   }
 
   public static float codeToFloat(String code) {
