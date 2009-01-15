@@ -458,18 +458,29 @@ def sumsreducer(key, values):
 
 
 def statsmapper(key, value):
-    yield (key, (1, value, value**2))
+    yield (key, (1, value, value**2, value, value))
 
 
 def statsreducer(key, values):
     columns = izip(*values)
     s0 = sum(columns.next())
-    column = columns.next()
-    (s1, minimum, maximum) = (sum(column), min(column), max(column))
+    s1 = sum(columns.next())
     s2 = sum(columns.next())
+    minimum = min(columns.next())
+    maximum = max(columns.next())
     mean = float(s1) / s0
     std = sqrt(s0 * s2 - s1**2) / s0
     yield (key, (mean, std, minimum, maximum))
+
+
+def statscombiner(key, values):
+    columns = izip(*values)
+    s0 = sum(columns.next())
+    s1 = sum(columns.next())
+    s2 = sum(columns.next())
+    minimum = min(columns.next())
+    maximum = max(columns.next())
+    yield (key, (s0, s1, s2, minimum, maximum))
 
 
 def incrcounter(group, counter, amount):
