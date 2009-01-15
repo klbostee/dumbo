@@ -13,7 +13,7 @@ import types
 import subprocess
 import urllib
 import resource
-from itertools import groupby
+from itertools import groupby, imap, izip
 from operator import itemgetter, concat
 
 
@@ -373,9 +373,10 @@ def run(mapper,
         iterarg = 0  # default value
         if len(sys.argv) > 2:
             iterarg = int(sys.argv[2])
+        memlim = None  # memory limit
         if len(sys.argv) > 3:
-            lim = int(sys.argv[3])  # memory limit
-            resource.setrlimit(resource.RLIMIT_AS, (lim, lim))
+            memlim = int(sys.argv[3])
+            resource.setrlimit(resource.RLIMIT_AS, (memlim, memlim))
         if iterarg == iter:
             if type(mapper) == types.ClassType:
                 if hasattr(mapper, 'map'):
@@ -398,6 +399,9 @@ def run(mapper,
                     mapconf()
                 outputs = itermap(inputs, mapper)
                 if combiner:
+                    if (not buffersize) and memlim:
+                        buffersize = int(memlim * 0.33) / 512  # educated guess
+                        print >>sys.stderr, 'INFO: buffersize =', buffersize
                     outputs = iterreduce(sorted(outputs, buffersize), combiner)
                 if mapclose:
                     mapclose()
@@ -446,6 +450,10 @@ def identityreducer(key, values):
 
 def sumreducer(key, values):
     yield (key, sum(values))
+    
+
+def sumsreducer(key,values):
+    yield key,tuple(imap(sum,izip(*values)))
 
 
 def incrcounter(group, counter, amount):
@@ -845,7 +853,7 @@ if __name__ == '__main__':
     elif sys.argv[1] == 'modpath':
         print sys.argv[0]
         retval = 0
-    elif sys.argv[1].endswith(".py"):
+    elif sys.argv[1].endswith('.py'):
         retval = start(sys.argv[1], parseargs(sys.argv[1:]))
     else:
         print >> sys.stderr, 'ERROR: unknown dumbo command:', sys.argv[1]
