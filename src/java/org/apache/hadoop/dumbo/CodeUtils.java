@@ -86,7 +86,7 @@ public abstract class CodeUtils {
     return Long.parseLong(code);
   }
   
-  public static BigInteger codeToBigInteger(String code) {
+  public static BigInteger codeToBigInt(String code) {
     return new BigInteger(code.substring(0, code.length()-1));
   }
 

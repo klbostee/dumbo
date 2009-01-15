@@ -21,6 +21,7 @@ package org.apache.hadoop.dumbo;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.math.BigInteger;
 
 import org.apache.hadoop.dumbo.CodeUtils.CodeType;
 import org.apache.hadoop.io.WritableComparable;
@@ -63,6 +64,8 @@ public class CodeWritable implements WritableComparable {
       out.writeBoolean(CodeUtils.codeToBoolean(code));
     } else if (type == CodeType.INTEGER) {
       WritableUtils.writeVLong(out, CodeUtils.codeToLong(code));
+    } else if (type == CodeType.LONG) {
+      writeBytes(out, CodeUtils.codeToBigInt(code).toByteArray());
     } else if (type == CodeType.FLOAT) {
       out.writeFloat(CodeUtils.codeToFloat(code));
     } else if (type == CodeType.TUPLE) {
@@ -84,6 +87,8 @@ public class CodeWritable implements WritableComparable {
       code = CodeUtils.booleanToCode(in.readBoolean());
     } else if (type == CodeType.INTEGER.ordinal()) {
       code = CodeUtils.longToCode(WritableUtils.readVLong(in));
+    } else if (type == CodeType.LONG.ordinal()) {
+      code = CodeUtils.bigIntToCode(new BigInteger(readBytes(in)));
     } else if (type == CodeType.FLOAT.ordinal()) {
       code = new Float(in.readFloat()).toString();
     } else if (type == CodeType.TUPLE.ordinal()) {
@@ -113,6 +118,18 @@ public class CodeWritable implements WritableComparable {
     return new String(buffer, "UTF-8");
   }
 
+  private static void writeBytes(DataOutput out, byte[] bytes) throws IOException {
+    WritableUtils.writeVInt(out, bytes.length);
+    out.write(bytes);
+  }
+  
+  private static byte[] readBytes(DataInput in) throws IOException {
+    int length = WritableUtils.readVInt(in);
+    byte[] bytes = new byte[length];
+    in.readFully(bytes);
+    return bytes;
+  }
+  
   private static void writeSequence(DataOutput out, String[] codes) throws IOException {
     WritableUtils.writeVInt(out, codes.length);
     for (String subcode : codes) { 
