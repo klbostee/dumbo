@@ -15,6 +15,7 @@ import urllib
 import resource
 from itertools import groupby, imap, izip
 from operator import itemgetter, concat
+from math import sqrt
 
 
 class Job:
@@ -401,7 +402,7 @@ def run(mapper,
                 if combiner:
                     if (not buffersize) and memlim:
                         buffersize = int(memlim * 0.33) / 512  # educated guess
-                        print >>sys.stderr, 'INFO: buffersize =', buffersize
+                        print >> sys.stderr, 'INFO: buffersize =', buffersize
                     outputs = iterreduce(sorted(outputs, buffersize), combiner)
                 if mapclose:
                     mapclose()
@@ -452,8 +453,23 @@ def sumreducer(key, values):
     yield (key, sum(values))
     
 
-def sumsreducer(key,values):
-    yield key,tuple(imap(sum,izip(*values)))
+def sumsreducer(key, values):
+    yield (key, tuple(imap(sum, izip(*values))))
+
+
+def statsmapper(key, value):
+    yield (key, (1, value, value**2))
+
+
+def statsreducer(key, values):
+    columns = izip(*values)
+    s0 = sum(columns.next())
+    column = columns.next()
+    (s1, lower, upper) = (sum(column), min(column), max(column))
+    s2 = sum(columns.next())
+    mean = float(s1) / s0
+    std = sqrt(s0 * s2 - s1**2) / s0
+    yield (key, (mean, std, lower, upper))
 
 
 def incrcounter(group, counter, amount):
