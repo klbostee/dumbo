@@ -27,19 +27,8 @@ class Job:
         self.iters.append((args, kwargs))
 
     def run(self):
-        scratch = 'dumbo-tmp-%i' % random.randint(0, sys.maxint)
         for (index, (args, kwargs)) in enumerate(self.iters):
-            newopts = {}
-            if index != 0:
-                newopts['input'] = '%s-%i' % (scratch, index - 1)
-                newopts['delinputs'] = 'yes'
-                newopts['inputformat'] = 'code'
-                newopts['addpath'] = 'no'
-            if index != len(self.iters) - 1:
-                newopts['output'] = '%s-%i' % (scratch, index)
-                newopts['outputformat'] = 'code'
             (kwargs['iter'], kwargs['itercnt']) = (index, len(self.iters))
-            kwargs['newopts'] = newopts
             run(*args, **kwargs)
 
 
@@ -368,8 +357,7 @@ def run(mapper,
         mapclose=None,
         redclose=None,
         iter=0,
-        itercnt=1,
-        newopts={}):
+        itercnt=1):
     if len(sys.argv) > 1 and not sys.argv[1][0] == '-':
         iterarg = 0  # default value
         if len(sys.argv) > 2:
@@ -418,8 +406,23 @@ def run(mapper,
                 print '\t'.join(output)
     else:
         opts = parseargs(sys.argv[1:])
+        newopts = {}
         newopts['iteration'] = str(iter)
         newopts['itercount'] = str(itercnt)
+        outputopt = getopt(opts, 'output', delete=False)
+        if not outputopt:
+            print >> sys.stderr, 'ERROR: no output path given'
+            sys.exit(1)
+        if iter != 0:
+            newopts['input'] = outputopt[0] + "_pre" + str(iter)
+            preoutputsopt = getopt(opts, 'preoutputs')
+            if not (preoutputsopt and preoutputsopt[0] == 'yes'):
+                newopts['delinputs'] = 'yes'
+            newopts['inputformat'] = 'code'
+            newopts['addpath'] = 'no'
+        if iter < itercnt - 1:
+            newopts['output'] = outputopt[0] + "_pre" + str(iter + 1)
+            newopts['outputformat'] = 'code'
         if not reducer:
             newopts['numreducetasks'] = '0'
         (key, delindexes) = (None, [])
@@ -429,7 +432,7 @@ def run(mapper,
         for delindex in reversed(delindexes):
             del opts[delindex]
         opts += newopts.iteritems()
-        hadoopopt = getopts(opts, ['hadoop'], delete=False)['hadoop']
+        hadoopopt = getopt(opts, 'hadoop', delete=False)
         if hadoopopt:
             retval = StreamingIteration(sys.argv[0], opts).run()
         else:
@@ -574,6 +577,10 @@ def getopts(opts, keys, delete=True):
         for delindex in reversed(delindexes):
             del opts[delindex]
     return askedopts
+
+
+def getopt(opts, key, delete=True):
+    return getopts(opts, [key], delete)[key]
 
 
 def configopts(section, prog=None, opts=[]):
