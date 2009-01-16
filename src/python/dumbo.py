@@ -413,9 +413,9 @@ def run(mapper,
         if not outputopt:
             print >> sys.stderr, 'ERROR: no output path given'
             sys.exit(1)
+        preoutputsopt = getopt(opts, 'preoutputs')
         if iter != 0:
             newopts['input'] = outputopt[0] + "_pre" + str(iter)
-            preoutputsopt = getopt(opts, 'preoutputs')
             if not (preoutputsopt and preoutputsopt[0] == 'yes'):
                 newopts['delinputs'] = 'yes'
             newopts['inputformat'] = 'code'
