@@ -327,7 +327,7 @@ class StreamingIteration(Iteration):
             self.opts.append(('file', typedbytes.findmodpath()))
             self.opts.append(('typedbytes', 'all'))
         if addedopts['addpath'] and addedopts['addpath'][0] == 'yes':
-            self.opts.append(('jobconf', 'dumbo.as.named.code=true'))
+            self.opts.append(('cmdenv', 'dumbo_add_path=true'))
         pyenv = envdef('PYTHONPATH',
                        addedopts['libegg'],
                        'file',
@@ -403,8 +403,8 @@ def run(mapper,
                     combiner = combiner().reduce
                 else:
                     combiner = combiner()
-            if os.environ.has_key("stream_input_typed_bytes") and \
-            os.environ["stream_input_typed_bytes"] == "true":
+            if os.environ.has_key('stream_input_typed_bytes') and \
+            os.environ['stream_input_typed_bytes'] == 'true':
                 print >> sys.stderr, "INFO: inputting typed bytes"
                 import typedbytes
                 inputs = typedbytes.PairedInput(sys.stdin).reads()
@@ -413,6 +413,9 @@ def run(mapper,
             if sys.argv[1].startswith('map'):
                 if mapconf:
                     mapconf()
+                if os.environ.has_key('dumbo_add_path'):
+                    path = os.environ['map_input_file']
+                    inputs = (((path, key), value) for (key, value) in inputs)
                 outputs = itermap(inputs, mapper)
                 if combiner:
                     if (not buffersize) and memlim:
@@ -430,8 +433,8 @@ def run(mapper,
                     redclose()
             else:
                 outputs = inputs
-            if os.environ.has_key("stream_output_typed_bytes") and \
-            os.environ["stream_output_typed_bytes"] == "true":
+            if os.environ.has_key('stream_output_typed_bytes') and \
+            os.environ['stream_output_typed_bytes'] == 'true':
                 print >> sys.stderr, "INFO: outputting typed bytes"
                 import typedbytes
                 typedbytes.PairedOutput(sys.stdout).writes(outputs)
