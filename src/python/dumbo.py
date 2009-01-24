@@ -225,7 +225,8 @@ class StreamingIteration(Iteration):
                                         'cachearchive',
                                         'codewritable',
                                         'addpath',
-                                        'python'])
+                                        'python',
+                                        'typedbytes'])
         hadoop = findhadoop(addedopts['hadoop'][0])
         (streamingjar, dumbojar) = (findjar(hadoop, 'streaming'),
                                     findjar(hadoop, 'dumbo'))
@@ -249,7 +250,8 @@ class StreamingIteration(Iteration):
         if addedopts['numreducetasks']:
             numreducetasks = int(addedopts['numreducetasks'][0])
             self.opts.append(('numReduceTasks', str(numreducetasks)))
-            if numreducetasks == 0:
+            if numreducetasks == 0 and \
+               not (addedopts['typedbytes'] and addedopts['typedbytes'][0] == 'yes'):
                 self.opts.append(('jobconf',
                                  'mapred.mapoutput.key.class=%s.CodeWritable'
                                   % dumbopkg))
@@ -268,21 +270,32 @@ class StreamingIteration(Iteration):
                 self.opts.append(('cacheArchive', cachearchive))
         if not addedopts['inputformat']:
             addedopts['inputformat'] = ['auto']
-        inputformat_shortcuts = \
-            {'code': dumbopkg + '.SequenceFileAsCodeInputFormat',
-             'text': dumbopkg + '.TextAsCodeInputFormat',
-             'sequencefile': dumbopkg + '.SequenceFileAsCodeInputFormat',
-             'auto': dumbopkg + '.AutoAsCodeInputFormat'}
-        inputformat_shortcuts.update(configopts('inputformats', self.prog))
-        inputformat = addedopts['inputformat'][0]
-        if inputformat_shortcuts.has_key(inputformat.lower()):
-            inputformat = inputformat_shortcuts[inputformat.lower()]
-        if inputformat.endswith('AsCodeInputFormat'):
-            self.opts.append(('inputformat', inputformat))
+        if not (addedopts['typedbytes'] and addedopts['typedbytes'][0] == 'yes'):
+            inputformat_shortcuts = \
+                {'code': dumbopkg + '.SequenceFileAsCodeInputFormat',
+                 'text': dumbopkg + '.TextAsCodeInputFormat',
+                 'sequencefile': dumbopkg + '.SequenceFileAsCodeInputFormat',
+                 'auto': dumbopkg + '.AutoAsCodeInputFormat'}
+            inputformat_shortcuts.update(configopts('inputformats', self.prog))
+            inputformat = addedopts['inputformat'][0]
+            if inputformat_shortcuts.has_key(inputformat.lower()):
+                inputformat = inputformat_shortcuts[inputformat.lower()]
+            if inputformat.endswith('AsCodeInputFormat'):
+                self.opts.append(('inputformat', inputformat))
+            else:
+                self.opts.append(('jobconf', 'dumbo.as.code.input.format.class='
+                                  + inputformat))
+                self.opts.append(('inputformat', dumbopkg + '.AsCodeInputFormat'))
         else:
-            self.opts.append(('jobconf', 'dumbo.as.code.input.format.class='
-                              + inputformat))
-            self.opts.append(('inputformat', dumbopkg + '.AsCodeInputFormat'))
+            inputformat_shortcuts = \
+                {'code': 'org.apache.hadoop.mapred.SequenceFileInputFormat',
+                 'text': 'org.apache.hadoop.mapred.TextInputFormat',
+                 'sequencefile': 'org.apache.hadoop.mapred.SequenceFileInputFormat',
+                 'auto': 'org.apache.hadoop.mapred.AutoInputFormat'}
+            inputformat = addedopts['inputformat'][0]
+            if inputformat_shortcuts.has_key(inputformat.lower()):
+                inputformat = inputformat_shortcuts[inputformat.lower()]
+            self.opts.append(('inputformat', inputformat))
         if not addedopts['outputformat']:
             addedopts['outputformat'] = ['sequencefile']
         outputformat_shortcuts = \
@@ -292,10 +305,14 @@ class StreamingIteration(Iteration):
         outputformat = addedopts['outputformat'][0]
         if outputformat_shortcuts.has_key(outputformat.lower()):
             outputformat = outputformat_shortcuts[outputformat.lower()]
-        self.opts.append(('jobconf', 'dumbo.from.code.output.format.class='
-                          + outputformat))
-        self.opts.append(('outputformat', dumbopkg + '.FromCodeOutputFormat'))
-        if not (addedopts['codewritable'] and addedopts['codewritable'][0] == 'no'):
+        if not (addedopts['typedbytes'] and addedopts['typedbytes'][0] == 'yes'):
+            self.opts.append(('jobconf', 'dumbo.from.code.output.format.class='
+                              + outputformat))
+            self.opts.append(('outputformat', dumbopkg + '.FromCodeOutputFormat'))
+        else:
+            self.opts.append(('outputformat', outputformat))
+        if not (addedopts['codewritable'] and addedopts['codewritable'][0] == 'no') and \
+        not (addedopts['typedbytes'] and addedopts['typedbytes'][0] == 'yes'):
             self.opts.append(('jobconf', 'mapred.mapoutput.key.class=%s.CodeWritable'
                               % dumbopkg))
             self.opts.append(('jobconf', 'mapred.mapoutput.value.class=%s.CodeWritable'
@@ -305,6 +322,10 @@ class StreamingIteration(Iteration):
                               + urllib.quote_plus(opt[0])))
             self.opts.append(('mapper', dumbopkg + '.CodeWritableMapper'))
             self.opts.append(('jobconf', 'dumbo.code.writable.map.class=org.apache.hadoop.streaming.PipeMapper'))
+        if addedopts['typedbytes'] and addedopts['typedbytes'][0] == 'yes':
+            import typedbytes
+            self.opts.append(('file', typedbytes.findmodpath()))
+            self.opts.append(('typedbytes', 'all'))
         if addedopts['addpath'] and addedopts['addpath'][0] == 'yes':
             self.opts.append(('jobconf', 'dumbo.as.named.code=true'))
         pyenv = envdef('PYTHONPATH',
@@ -382,7 +403,13 @@ def run(mapper,
                     combiner = combiner().reduce
                 else:
                     combiner = combiner()
-            inputs = loadcode(line[:-1] for line in sys.stdin)
+            if os.environ.has_key("stream_input_typed_bytes") and \
+            os.environ["stream_input_typed_bytes"] == "true":
+                print >> sys.stderr, "INFO: inputting typed bytes"
+                import typedbytes
+                inputs = typedbytes.PairedInput(sys.stdin).reads()
+            else:
+                inputs = loadcode(line[:-1] for line in sys.stdin)
             if sys.argv[1].startswith('map'):
                 if mapconf:
                     mapconf()
@@ -397,13 +424,20 @@ def run(mapper,
             elif reducer:
                 if redconf:
                     redconf()
+
                 outputs = iterreduce(inputs, reducer)
                 if redclose:
                     redclose()
             else:
                 outputs = inputs
-            for output in dumpcode(outputs):
-                print '\t'.join(output)
+            if os.environ.has_key("stream_output_typed_bytes") and \
+            os.environ["stream_output_typed_bytes"] == "true":
+                print >> sys.stderr, "INFO: outputting typed bytes"
+                import typedbytes
+                typedbytes.PairedOutput(sys.stdout).writes(outputs)
+            else:
+                for output in dumpcode(outputs):
+                    print '\t'.join(output)
     else:
         opts = parseargs(sys.argv[1:])
         newopts = {}
@@ -744,22 +778,30 @@ def cat(path, opts):
     hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'],
                     shortcuts=dict(configopts('jars')))
     try:
-        if type[:4] == 'auto':
-            codetype = 'autoascode'
-        elif type[:4] == 'text':
-            codetype = 'textascode'
+        if type == 'typedbytes':
+            import typedbytes
+            process = os.popen('%s %s/bin/hadoop dfs -typedbytes %s'
+                                % (hadenv, hadoop, path))
+            for output in typedbytes.PairedInput(process):
+                print '\t'.join(map(str, output))
+            process.close()
         else:
-            codetype = 'sequencefileascode'
-        process = os.popen('%s %s/bin/hadoop jar %s catpath %s %s'
-                            % (hadenv, hadoop, dumbojar, codetype, path))
-        if type[-6:] == 'ascode' or addedopts['ascode'] \
-        and addedopts['ascode'][0] == 'yes':
-            outputs = dumpcode(loadcode(process))
-        else:
-            outputs = dumptext(loadcode(process))
-        for output in outputs:
-            print '\t'.join(output)
-        process.close()
+            if type[:4] == 'auto':
+                codetype = 'autoascode'
+            elif type[:4] == 'text':
+                codetype = 'textascode'
+            else:
+                codetype = 'sequencefileascode'
+            process = os.popen('%s %s/bin/hadoop jar %s catpath %s %s'
+                                % (hadenv, hadoop, dumbojar, codetype, path))
+            if type[-6:] == 'ascode' or addedopts['ascode'] \
+            and addedopts['ascode'][0] == 'yes':
+                outputs = dumpcode(loadcode(process))
+            else:
+                outputs = dumptext(loadcode(process))
+            for output in outputs:
+                print '\t'.join(output)
+            process.close()
     except IOError:
         pass  # ignore
     return 0
