@@ -785,8 +785,12 @@ def cat(path, opts):
             import typedbytes
             process = os.popen('%s %s/bin/hadoop dfs -typedbytes %s'
                                 % (hadenv, hadoop, path))
-            for output in typedbytes.PairedInput(process):
-                print '\t'.join(map(str, output))
+            if addedopts['ascode'] and addedopts['ascode'][0] == 'yes':
+                outputs = dumpcode(typedbytes.PairedInput(process))
+            else:
+                outputs = dumptext(typedbytes.PairedInput(process))
+            for output in outputs:
+                print '\t'.join(output)
             process.close()
         else:
             if type[:4] == 'auto':
