@@ -783,7 +783,7 @@ def cat(path, opts):
     try:
         if type == 'typedbytes':
             import typedbytes
-            process = os.popen('%s %s/bin/hadoop dfs -typedbytes %s'
+            process = os.popen('%s %s/bin/hadoop dumptb %s'
                                 % (hadenv, hadoop, path))
             if addedopts['ascode'] and addedopts['ascode'][0] == 'yes':
                 outputs = dumpcode(typedbytes.PairedInput(process))
