@@ -250,8 +250,7 @@ class StreamingIteration(Iteration):
         if addedopts['numreducetasks']:
             numreducetasks = int(addedopts['numreducetasks'][0])
             self.opts.append(('numReduceTasks', str(numreducetasks)))
-            if numreducetasks == 0 and \
-               not (addedopts['typedbytes'] and addedopts['typedbytes'][0] == 'yes'):
+            if numreducetasks == 0 and not addedopts['typedbytes']:
                 self.opts.append(('jobconf',
                                  'mapred.mapoutput.key.class=%s.CodeWritable'
                                   % dumbopkg))
