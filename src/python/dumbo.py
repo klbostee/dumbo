@@ -312,7 +312,7 @@ class StreamingIteration(Iteration):
             self.opts.append(('outputformat', dumbopkg + '.FromCodeOutputFormat'))
         else:
             self.opts.append(('outputformat', outputformat))
-        if not (addedopts['codewritable'] and addedopts['codewritable'][0] == 'no') and \
+        if addedopts['codewritable'] and addedopts['codewritable'][0] == 'yes' and \
         not addedopts['typedbytes']:
             self.opts.append(('jobconf', 'mapred.mapoutput.key.class=%s.CodeWritable'
                               % dumbopkg))
