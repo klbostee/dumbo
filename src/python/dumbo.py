@@ -786,6 +786,10 @@ def cat(path, opts):
     if not addedopts['hadoop']:
         return decodepipe(opts + [('file', path)])
     hadoop = findhadoop(addedopts['hadoop'][0])
+    streamingjar = findjar(hadoop, 'streaming')
+    if not streamingjar:
+        print >> sys.stderr, 'ERROR: Streaming jar not found'
+        return 1
     dumbojar = findjar(hadoop, 'dumbo')
     if not dumbojar:
         print >> sys.stderr, 'ERROR: Dumbo jar not found'
@@ -799,8 +803,8 @@ def cat(path, opts):
     try:
         if type == 'typedbytes':
             import typedbytes
-            process = os.popen('%s %s/bin/hadoop dumptb %s'
-                                % (hadenv, hadoop, path))
+            process = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
+                                % (hadenv, hadoop, streamingjar, path))
             if addedopts['ascode'] and addedopts['ascode'][0] == 'yes':
                 outputs = dumpcode(typedbytes.PairedInput(process))
             else:
