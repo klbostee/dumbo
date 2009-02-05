@@ -292,6 +292,7 @@ class StreamingIteration(Iteration):
                  'text': 'org.apache.hadoop.mapred.TextInputFormat',
                  'sequencefile': 'org.apache.hadoop.mapred.SequenceFileInputFormat',
                  'auto': 'org.apache.hadoop.streaming.AutoInputFormat'}
+            inputformat_shortcuts.update(configopts('inputformats', self.prog))
             inputformat = addedopts['inputformat'][0]
             if inputformat_shortcuts.has_key(inputformat.lower()):
                 inputformat = inputformat_shortcuts[inputformat.lower()]
