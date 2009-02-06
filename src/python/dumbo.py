@@ -327,7 +327,12 @@ class StreamingIteration(Iteration):
         if addedopts['typedbytes']:
             import typedbytes
             self.opts.append(('file', typedbytes.findmodpath()))
-            self.opts.append(('typedbytes', addedopts['typedbytes'][0]))
+            if addeopts['typedbytes'][0] in ('all', 'input'):
+                self.opts.append(('jobconf', 'stream.map.input=typedbytes'))
+            if addeopts['typedbytes'][0] in ('all', 'output'):
+                self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
+                self.opts.append(('jobconf', 'stream.reduce.input=typedbytes'))
+                self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
         if addedopts['addpath'] and addedopts['addpath'][0] == 'yes':
             self.opts.append(('cmdenv', 'dumbo_add_path=true'))
         pyenv = envdef('PYTHONPATH',
@@ -406,8 +411,8 @@ def run(mapper,
                 else:
                     combiner = combiner()
             if sys.argv[1].startswith('map'):
-                if os.environ.has_key('stream_map_input_typed_bytes') and \
-                os.environ['stream_map_input_typed_bytes'] == 'true':
+                if os.environ.has_key('stream_map_input') and \
+                os.environ['stream_map_input'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: inputting typed bytes"
                     import typedbytes
                     inputs = typedbytes.PairedInput(sys.stdin).reads()
@@ -426,8 +431,8 @@ def run(mapper,
                     outputs = iterreduce(sorted(outputs, buffersize), combiner)
                 if mapclose:
                     mapclose()
-                if os.environ.has_key('stream_map_output_typed_bytes') and \
-                os.environ['stream_map_output_typed_bytes'] == 'true':
+                if os.environ.has_key('stream_map_output') and \
+                os.environ['stream_map_output'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: outputting typed bytes"
                     import typedbytes
                     typedbytes.PairedOutput(sys.stdout).writes(outputs)
@@ -435,8 +440,8 @@ def run(mapper,
                     for output in dumpcode(outputs):
                         print '\t'.join(output)
             elif reducer:
-                if os.environ.has_key('stream_reduce_input_typed_bytes') and \
-                os.environ['stream_reduce_input_typed_bytes'] == 'true':
+                if os.environ.has_key('stream_reduce_input') and \
+                os.environ['stream_reduce_input'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: inputting typed bytes"
                     import typedbytes
                     inputs = typedbytes.PairedInput(sys.stdin).reads()
@@ -447,8 +452,8 @@ def run(mapper,
                 outputs = iterreduce(inputs, reducer)
                 if redclose:
                     redclose()
-                if os.environ.has_key('stream_reduce_output_typed_bytes') and \
-                os.environ['stream_reduce_output_typed_bytes'] == 'true':
+                if os.environ.has_key('stream_reduce_output') and \
+                os.environ['stream_reduce_output'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: outputting typed bytes"
                     import typedbytes
                     typedbytes.PairedOutput(sys.stdout).writes(outputs)
