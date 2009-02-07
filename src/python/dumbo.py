@@ -329,7 +329,7 @@ class StreamingIteration(Iteration):
             self.opts.append(('file', typedbytes.findmodpath()))
             if addedopts['typedbytes'][0] in ('all', 'input'):
                 self.opts.append(('jobconf', 'stream.map.input=typedbytes'))
-            if addeopts['typedbytes'][0] in ('all', 'output'):
+            if addedopts['typedbytes'][0] in ('all', 'output'):
                 self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
                 self.opts.append(('jobconf', 'stream.reduce.input=typedbytes'))
                 self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
