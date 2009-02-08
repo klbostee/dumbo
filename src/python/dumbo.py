@@ -288,9 +288,9 @@ class StreamingIteration(Iteration):
                 self.opts.append(('inputformat', dumbopkg + '.AsCodeInputFormat'))
         else:
             inputformat_shortcuts = \
-                {'code': 'org.apache.hadoop.mapred.SequenceFileInputFormat',
+                {'code': 'org.apache.hadoop.streaming.AutoInputFormat',
                  'text': 'org.apache.hadoop.mapred.TextInputFormat',
-                 'sequencefile': 'org.apache.hadoop.mapred.SequenceFileInputFormat',
+                 'sequencefile': 'org.apache.hadoop.streaming.AutoInputFormat',
                  'auto': 'org.apache.hadoop.streaming.AutoInputFormat'}
             inputformat_shortcuts.update(configopts('inputformats', self.prog))
             inputformat = addedopts['inputformat'][0]
