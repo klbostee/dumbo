@@ -13,7 +13,8 @@ import types
 import subprocess
 import urllib
 import resource
-from itertools import groupby, imap, izip
+import heapq
+from itertools import chain, groupby, imap, izip
 from operator import itemgetter, concat
 from math import sqrt
 
@@ -519,8 +520,28 @@ def sumsreducer(key, values):
     yield (key, tuple(imap(sum, izip(*values))))
 
 
-def statsmapper(key, value):
-    yield (key, (1, value, value**2, value, value))
+def nlargestreducer(n, key=None):
+    def reducer(key_, values):
+        yield (key_, heapq.nlargest(n, chain(*values), key=key))
+    return reducer
+
+
+def nlargestcombiner(n, key=None):
+    def combiner(key_, values):
+        yield (key_, heapq.nlargest(n, values, key=key))
+    return combiner
+
+
+def nsmallestreducer(n, key=None):
+    def reducer(key_, values):
+        yield (key_, heapq.nsmallest(n, chain(*values), key=key))
+    return reducer
+
+
+def nsmallestcombiner(n, key=None):
+    def combiner(key_, values):
+        yield (key_, heapq.nsmallest(n, values, key=key))
+    return combiner
 
 
 def statsreducer(key, values):
@@ -536,7 +557,7 @@ def statsreducer(key, values):
 
 
 def statscombiner(key, values):
-    columns = izip(*values)
+    columns = izip(*((1, value, value**2, value, value) for value in values))
     s0 = sum(columns.next())
     s1 = sum(columns.next())
     s2 = sum(columns.next())
