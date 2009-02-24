@@ -553,7 +553,7 @@ def statsreducer(key, values):
     maximum = max(columns.next())
     mean = float(s1) / s0
     std = sqrt(s0 * s2 - s1**2) / s0
-    yield (key, (mean, std, minimum, maximum))
+    yield (key, (s0, mean, std, minimum, maximum))
 
 
 def statscombiner(key, values):
