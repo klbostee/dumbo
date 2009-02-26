@@ -19,7 +19,7 @@ from operator import itemgetter, concat
 from math import sqrt
 
 
-class Job:
+class Job(object):
     
     def __init__(self):
         self.iters = []
@@ -33,7 +33,7 @@ class Job:
             run(*args, **kwargs)
 
 
-class Program:
+class Program(object):
 
     def __init__(self, prog, opts=[]):
         (self.prog, self.opts) = (prog, opts)
@@ -63,7 +63,19 @@ class Program:
         return start(self.prog, self.opts)
 
 
-class Counter:
+class Params(object):
+
+    def get(self, name): 
+        try:
+            return os.environ[name]
+        except KeyError:
+            return None
+
+    def __getitem__(self,key):
+        return self.get(str(key))
+   
+
+class Counter(object):
 
     def __init__(self, name, group='Program'):
         self.group = group
@@ -71,9 +83,38 @@ class Counter:
 
     def incr(self, amount):
         incrcounter(self.group, self.name, amount)
+    __iadd__ = incr
 
 
-class Iteration:
+class Counters(object):
+    
+    def __init__(self):
+        self.counters = {}
+
+    def __getitem__(self, key):
+        try:
+            return self.counters[key]
+        except KeyError:
+            counter = Counter(str(key))
+            self.counters[key] = counter
+            return counter
+
+    def __setitem__(self, key, value):
+        if value:
+            raise RuntimeError("assigning to counters is not allowed")
+
+
+class MapRedBase(object):
+    
+    params = Params()
+    counters = Counters()
+    
+    def setstatus(self, msg):
+        setstatus(msg)
+    status = property(fset=setstatus)
+
+
+class Iteration(object):
 
     def __init__(self, prog, opts):
         (self.prog, self.opts) = (prog, opts)
@@ -87,7 +128,8 @@ class Iteration:
                                         'hadoop',
                                         'starter',
                                         'name',
-                                        'memlimit'])
+                                        'memlimit',
+                                        'param'])
         if addedopts['fake'] and addedopts['fake'][0] == 'yes':
             def dummysystem(*args, **kwargs):
                 return 0
@@ -126,6 +168,8 @@ class Iteration:
                          progincmd, iter, memlim)))
         self.opts.append(('reducer', '%s %s red %i%s' % (python,
                          progincmd, iter, memlim)))
+        for param in addedopts['param']:
+            self.opts.append(('cmdenv', param))
         return 0
 
 
@@ -397,20 +441,23 @@ def run(mapper,
             resource.setrlimit(resource.RLIMIT_AS, (memlim, memlim))
         if iterarg == iter:
             if type(mapper) == types.ClassType:
-                if hasattr(mapper, 'map'):
-                    mapper = mapper().map
+                mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+                if hasattr(mappercls, 'map'):
+                    mapper = mappercls().map
                 else:
-                    mapper = mapper()
+                    mapper = mappercls()
             if type(reducer) == types.ClassType:
-                if hasattr(reducer, 'reduce'):
-                    reducer = reducer().reduce
+                reducercls = type('DumboReducer', (reducer, MapRedBase), {})
+                if hasattr(reducercls, 'reduce'):
+                    reducer = reducercls().reduce
                 else:
-                    reducer = reducer()
+                    reducer = reducercls()
             if type(combiner) == types.ClassType:
-                if hasattr(combiner, 'reduce'):
-                    combiner = combiner().reduce
+                combinercls = type('DumboCombiner', (combiner, MapRedBase), {})
+                if hasattr(combinercls, 'reduce'):
+                    combiner = combinercls().reduce
                 else:
-                    combiner = combiner()
+                    combiner = combinercls()
             if sys.argv[1].startswith('map'):
                 if os.environ.has_key('stream_map_input') and \
                 os.environ['stream_map_input'].lower() == 'typedbytes':
