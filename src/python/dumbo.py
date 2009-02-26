@@ -83,6 +83,7 @@ class Counter(object):
 
     def incr(self, amount):
         incrcounter(self.group, self.name, amount)
+        return self
     __iadd__ = incr
 
 
