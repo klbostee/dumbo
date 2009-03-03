@@ -101,8 +101,7 @@ class Counters(object):
             return counter
 
     def __setitem__(self, key, value):
-        if value:
-            raise RuntimeError("assigning to counters is not allowed")
+        pass
 
 
 class MapRedBase(object):
