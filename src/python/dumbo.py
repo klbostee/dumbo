@@ -129,14 +129,16 @@ class Iteration(object):
                                         'starter',
                                         'name',
                                         'memlimit',
-                                        'param'])
+                                        'param',
+                                        'parser',
+                                        'record'])
         if addedopts['fake'] and addedopts['fake'][0] == 'yes':
             def dummysystem(*args, **kwargs):
                 return 0
             global system
             system = dummysystem  # not very clean, but it works...
         if addedopts['debug'] and addedopts['debug'][0] == 'yes':
-            self.opts.append(('cmdenv', 'debug=yes'))
+            self.opts.append(('cmdenv', 'dumbo_debug=yes'))
         if not addedopts['python']:
             python = 'python'
         else:
@@ -170,6 +172,12 @@ class Iteration(object):
                          progincmd, iter, memlim)))
         for param in addedopts['param']:
             self.opts.append(('cmdenv', param))
+        if addedopts['parser'] and iter == 0:
+            self.opts.append(('cmdenv',
+                              'dumbo_parser=' + addedopts['parser'][0]))
+        if addedopts['record'] and iter == 0:
+            self.opts.append(('cmdenv',
+                              'dumbo_record=' + addedopts['record'][0]))
         return 0
 
 
@@ -471,7 +479,26 @@ def run(mapper,
                 if os.environ.has_key('dumbo_add_path'):
                     path = os.environ['map_input_file']
                     inputs = (((path, key), value) for (key, value) in inputs)
-                outputs = itermap(inputs, mapper)
+                if os.environ.has_key('dumbo_parser'):
+                    parser = os.environ['dumbo_parser']
+                    clsname = parser.split('.')[-1]          
+                    modname = '.'.join(parser.split('.')[:-1])            
+                    if not modname:
+                        raise ImportError(parser)
+                    module = __import__(modname, fromlist=[clsname])
+                    parse = getattr(module, clsname)().parse
+                    outputs = itermap(inputs, mapper, parse)
+                elif os.environ.has_key('dumbo_record'):
+                    record = os.environ['dumbo_record']
+                    clsname = record.split('.')[-1]
+                    modname = '.'.join(record.split('.')[:-1])
+                    if not modname:
+                        raise ImportError(parser)
+                    module = __import__(modname, fromlist=[clsname])
+                    set = getattr(module, clsname)().set
+                    outputs = itermap(inputs, mapper, lambda v: set(*v))
+                else:
+                    outputs = itermap(inputs, mapper)
                 if combiner:
                     if (not buffersize) and memlim:
                         buffersize = int(memlim * 0.33) / 512  # educated guess
@@ -621,10 +648,22 @@ def setstatus(message):
     print >> sys.stderr, 'reporter:status:%s' % message
 
 
-def itermap(data, mapfunc):
-    for (key, value) in data:
-        for output in mapfunc(key, value):
-            yield output
+def itermap(data, mapfunc, valfunc=None):
+    if valfunc:
+        for (key, value) in data:
+            try:
+                for output in mapfunc(key, valfunc(value)):
+                    yield output
+            except (ValueError, TypeError):
+                print >> sys.stderr, \
+                         'WARNING: skipping bad value (%s)' % str(value)
+                if os.environ.has_key('dumbo_debug'):
+                    raise
+                incrcounter('Dumbo', 'Bad inputs', 1)
+    else:
+        for (key, value) in data:
+            for output in mapfunc(key, value):
+                yield output
 
 
 def iterreduce(data, redfunc):
@@ -664,9 +703,9 @@ def loadcode(inputs):
         try:
             yield map(eval, input.split('\t', 1))
         except (ValueError, TypeError):
-            if os.environ.has_key('debug'):
-                raise
             print >> sys.stderr, 'WARNING: skipping bad input (%s)' % input
+            if os.environ.has_key('dumbo_debug'):
+                raise
             incrcounter('Dumbo', 'Bad inputs', 1)
 
 
