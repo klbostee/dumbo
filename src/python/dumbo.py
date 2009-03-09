@@ -1037,7 +1037,6 @@ if __name__ == '__main__':
         print '  dumbo encodepipe [<options>]'
         print '  dumbo decodepipe [<options>]'
         print '  dumbo doctest <python program>'
-        print '  dumbo modpath'
         sys.exit(1)
     if sys.argv[1] == 'start':
         retval = start(sys.argv[2], parseargs(sys.argv[2:]))
@@ -1059,9 +1058,6 @@ if __name__ == '__main__':
         retval = decodepipe(parseargs(sys.argv[2:]))
     elif sys.argv[1] == 'doctest':
         retval = doctest(sys.argv[2])
-    elif sys.argv[1] == 'modpath':
-        print sys.argv[0]
-        retval = 0
     elif sys.argv[1].endswith('.py'):
         retval = start(sys.argv[1], parseargs(sys.argv[1:]))
     else:
