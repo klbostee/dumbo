@@ -263,7 +263,7 @@ class StreamingIteration(Iteration):
         if retval != 0:
             return retval
         self.opts.append(('file', self.prog))
-        self.opts.append(('file', findmodpath()))
+        self.opts.append(('file', __file__.replace('/__init__.py', '')))
         addedopts = getopts(self.opts, ['hadoop',
                                         'name',
                                         'delinputs',
@@ -379,7 +379,7 @@ class StreamingIteration(Iteration):
             self.opts.append(('jobconf', 'dumbo.code.writable.map.class=org.apache.hadoop.streaming.PipeMapper'))
         if addedopts['typedbytes']:
             import typedbytes
-            self.opts.append(('file', typedbytes.findmodpath()))
+            self.opts.append(('file', typedbytes.__file__.replace('/__init__.py', '')))
             if addedopts['typedbytes'][0] in ('all', 'input'):
                 self.opts.append(('jobconf', 'stream.map.input=typedbytes'))
             if addedopts['typedbytes'][0] in ('all', 'output'):
@@ -807,13 +807,6 @@ def system(cmd, stdout=sys.stdout, stderr=sys.stderr):
     proc = subprocess.Popen(cmd, shell=True, stdout=stdout,
                             stderr=stderr)
     return os.waitpid(proc.pid, 0)[1] / 256
-
-
-def findmodpath():
-    process = os.popen(sys.executable + ' -m dumbo modpath')
-    modpath = process.readlines()[0].strip()
-    process.close()
-    return modpath
 
 
 def findhadoop(optval):
