@@ -1,30 +1,9 @@
 DESCRIPTION
 """""""""""
 
-Originally, Dumbo was just a simple Python module that made writing 
-and running Streaming programs very easy, but now it also consists 
-of some helper code in Java. More generally, Dumbo can be considered
+Dumbo is a Python module that makes writing and running Hadoop
+Streaming programs very easy. More generally, Dumbo can be considered
 to be a convenient Python API for writing MapReduce programs.
-
-
-INSTALLATION
-""""""""""""
-
-Dumbo should get built together with the rest of Hadoop when the 
-"dumbo/" directory is put in Hadoop's "src/contrib/" directory. More
-precisely, a "build/hadoop-*/contrib/dumbo/" directory should be
-generated when you run "ant package" in Hadoop's root directory.
-
-
-USAGE
-"""""
-
-contrib/dumbo/bin/put examples/brian.txt brian.txt
-
-contrib/dumbo/bin/start examples/wordcount.py \
--input brian.txt -output brian-wc -inputformat text
-
-contrib/dumbo/bin/cat brian-wc > brian-wc.txt
 
 
 MORE INFO
