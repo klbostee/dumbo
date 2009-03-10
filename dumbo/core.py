@@ -7,6 +7,7 @@ from itertools import groupby
 from operator import itemgetter, concat
 
 from dumbo.util import *
+from dumbo.cmd import *
 
 
 class Job(object):

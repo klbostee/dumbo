@@ -1,12 +1,14 @@
 """
 Example of two iterations in one Dumbo program:
 
->>> import dumbo
->>> opts = [('input','brian.txt'),('output','counts.txt')]
+>>> import sys
+>>> from dumbo import cmd, util
+>>> opts = [('python', sys.executable)]
+>>> opts += [('input','brian.txt'),('output','counts.txt')]
 >>> logfile = open('log.txt','a')
->>> dumbo.start('itertwice.py',opts,stdout=logfile,stderr=logfile)
+>>> cmd.start('itertwice.py',opts,stdout=logfile,stderr=logfile)
 0
->>> output = dict(dumbo.loadcode(open('counts.txt')))
+>>> output = dict(util.loadcode(open('counts.txt')))
 >>> int(output['e'])
 14
 """
