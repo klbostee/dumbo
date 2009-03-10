@@ -263,7 +263,7 @@ class StreamingIteration(Iteration):
         if retval != 0:
             return retval
         self.opts.append(('file', self.prog))
-        self.opts.append(('file', __file__.replace('/__init__.py', '')))
+        self.opts.append(('libegg', re.sub('\.egg.*$', '.egg', __file__)))
         addedopts = getopts(self.opts, ['hadoop',
                                         'name',
                                         'delinputs',
@@ -278,19 +278,26 @@ class StreamingIteration(Iteration):
                                         'cachearchive',
                                         'codewritable',
                                         'addpath',
-                                        'python',
-                                        'typedbytes'])
+                                        'python'])
         hadoop = findhadoop(addedopts['hadoop'][0])
-        (streamingjar, dumbojar) = (findjar(hadoop, 'streaming'),
-                                    findjar(hadoop, 'dumbo'))
+        streamingjar = findjar(hadoop, 'streaming')
         if not streamingjar:
             print >> sys.stderr, 'ERROR: Streaming jar not found'
             return 1
-        if not dumbojar:
-            print >> sys.stderr, 'ERROR: Dumbo jar not found'
+        try: 
+            import typedbytes
+        except ImportError:
+            print >> sys.stderr, 'ERROR: "typedbytes" module not found'
             return 1
-        addedopts['libjar'].append(dumbojar)
-        dumbopkg = 'org.apache.hadoop.dumbo'
+        modpath = re.sub('\.egg.*$', '.egg', typedbytes.__file__)
+        if modpath.endswith('.egg'):            
+            addedopts['libegg'].append(modpath)    
+        else:
+            self.opts.append(('file', modpath)) 
+        self.opts.append(('jobconf', 'stream.map.input=typedbytes'))
+        self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
+        self.opts.append(('jobconf', 'stream.reduce.input=typedbytes'))
+        self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
         if not addedopts['name']:
             self.opts.append(('jobconf', 'mapred.job.name='
                               + self.prog.split('/')[-1]))
@@ -303,14 +310,6 @@ class StreamingIteration(Iteration):
         if addedopts['numreducetasks']:
             numreducetasks = int(addedopts['numreducetasks'][0])
             self.opts.append(('numReduceTasks', str(numreducetasks)))
-            if numreducetasks == 0 and not addedopts['typedbytes']:
-                self.opts.append(('jobconf',
-                                 'mapred.mapoutput.key.class=%s.CodeWritable'
-                                  % dumbopkg))
-                self.opts.append(('jobconf',
-                                 'mapred.mapoutput.value.class=%s.CodeWritable'
-                                  % dumbopkg))
-                addedopts['codewritable'] = ['no']
         if addedopts['priority']:
             self.opts.append(('jobconf', 'mapred.job.priority=%s'
                               % addedopts['priority'][0]))
@@ -322,34 +321,16 @@ class StreamingIteration(Iteration):
                 self.opts.append(('cacheArchive', cachearchive))
         if not addedopts['inputformat']:
             addedopts['inputformat'] = ['auto']
-        if not (addedopts['typedbytes'] and \
-        addedopts['typedbytes'][0] in ('input','all')):
-            inputformat_shortcuts = \
-                {'code': dumbopkg + '.SequenceFileAsCodeInputFormat',
-                 'text': dumbopkg + '.TextAsCodeInputFormat',
-                 'sequencefile': dumbopkg + '.SequenceFileAsCodeInputFormat',
-                 'auto': dumbopkg + '.AutoAsCodeInputFormat'}
-            inputformat_shortcuts.update(configopts('inputformats', self.prog))
-            inputformat = addedopts['inputformat'][0]
-            if inputformat_shortcuts.has_key(inputformat.lower()):
-                inputformat = inputformat_shortcuts[inputformat.lower()]
-            if inputformat.endswith('AsCodeInputFormat'):
-                self.opts.append(('inputformat', inputformat))
-            else:
-                self.opts.append(('jobconf', 'dumbo.as.code.input.format.class='
-                                  + inputformat))
-                self.opts.append(('inputformat', dumbopkg + '.AsCodeInputFormat'))
-        else:
-            inputformat_shortcuts = \
-                {'code': 'org.apache.hadoop.streaming.AutoInputFormat',
-                 'text': 'org.apache.hadoop.mapred.TextInputFormat',
-                 'sequencefile': 'org.apache.hadoop.streaming.AutoInputFormat',
-                 'auto': 'org.apache.hadoop.streaming.AutoInputFormat'}
-            inputformat_shortcuts.update(configopts('inputformats', self.prog))
-            inputformat = addedopts['inputformat'][0]
-            if inputformat_shortcuts.has_key(inputformat.lower()):
-                inputformat = inputformat_shortcuts[inputformat.lower()]
-            self.opts.append(('inputformat', inputformat))
+        inputformat_shortcuts = \
+            {'code': 'org.apache.hadoop.streaming.AutoInputFormat',
+             'text': 'org.apache.hadoop.mapred.TextInputFormat',
+             'sequencefile': 'org.apache.hadoop.streaming.AutoInputFormat',
+             'auto': 'org.apache.hadoop.streaming.AutoInputFormat'}
+        inputformat_shortcuts.update(configopts('inputformats', self.prog))
+        inputformat = addedopts['inputformat'][0]
+        if inputformat_shortcuts.has_key(inputformat.lower()):
+            inputformat = inputformat_shortcuts[inputformat.lower()]
+        self.opts.append(('inputformat', inputformat))
         if not addedopts['outputformat']:
             addedopts['outputformat'] = ['sequencefile']
         outputformat_shortcuts = \
@@ -359,35 +340,9 @@ class StreamingIteration(Iteration):
         outputformat = addedopts['outputformat'][0]
         if outputformat_shortcuts.has_key(outputformat.lower()):
             outputformat = outputformat_shortcuts[outputformat.lower()]
-        if not (addedopts['typedbytes'] and \
-        addedopts['typedbytes'][0] in ('output','all')):
-            self.opts.append(('jobconf', 'dumbo.from.code.output.format.class='
-                              + outputformat))
-            self.opts.append(('outputformat', dumbopkg + '.FromCodeOutputFormat'))
-        else:
-            self.opts.append(('outputformat', outputformat))
-        if addedopts['codewritable'] and addedopts['codewritable'][0] == 'yes' and \
-        not addedopts['typedbytes']:
-            self.opts.append(('jobconf', 'mapred.mapoutput.key.class=%s.CodeWritable'
-                              % dumbopkg))
-            self.opts.append(('jobconf', 'mapred.mapoutput.value.class=%s.CodeWritable'
-                              % dumbopkg))
-            opt = getopts(self.opts, ['mapper'])['mapper']
-            self.opts.append(('jobconf', 'stream.map.streamprocessor='
-                              + urllib.quote_plus(opt[0])))
-            self.opts.append(('mapper', dumbopkg + '.CodeWritableMapper'))
-            self.opts.append(('jobconf', 'dumbo.code.writable.map.class=org.apache.hadoop.streaming.PipeMapper'))
-        if addedopts['typedbytes']:
-            import typedbytes
-            self.opts.append(('file', typedbytes.__file__.replace('/__init__.py', '')))
-            if addedopts['typedbytes'][0] in ('all', 'input'):
-                self.opts.append(('jobconf', 'stream.map.input=typedbytes'))
-            if addedopts['typedbytes'][0] in ('all', 'output'):
-                self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
-                self.opts.append(('jobconf', 'stream.reduce.input=typedbytes'))
-                self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
+        self.opts.append(('outputformat', outputformat))
         if addedopts['addpath'] and addedopts['addpath'][0] == 'yes':
-            self.opts.append(('cmdenv', 'dumbo_add_path=true'))
+            self.opts.append(('cmdenv', 'dumbo_addpath=true'))
         pyenv = envdef('PYTHONPATH',
                        addedopts['libegg'],
                        'file',
@@ -476,7 +431,7 @@ def run(mapper,
                     inputs = loadcode(line[:-1] for line in sys.stdin)
                 if mapconf:
                     mapconf()
-                if os.environ.has_key('dumbo_add_path'):
+                if os.environ.has_key('dumbo_addpath'):
                     path = os.environ['map_input_file']
                     inputs = (((path, key), value) for (key, value) in inputs)
                 if os.environ.has_key('dumbo_parser'):
@@ -888,7 +843,7 @@ def submit(*args, **kwargs):
 def cat(path, opts):
     opts += configopts('common')
     opts += configopts('cat')
-    addedopts = getopts(opts, ['hadoop', 'type', 'libjar', 'ascode'])
+    addedopts = getopts(opts, ['hadoop', 'libjar', 'ascode'])
     if not addedopts['hadoop']:
         return decodepipe(opts + [('file', path)])
     hadoop = findhadoop(addedopts['hadoop'][0])
@@ -896,45 +851,19 @@ def cat(path, opts):
     if not streamingjar:
         print >> sys.stderr, 'ERROR: Streaming jar not found'
         return 1
-    dumbojar = findjar(hadoop, 'dumbo')
-    if not dumbojar:
-        print >> sys.stderr, 'ERROR: Dumbo jar not found'
-        return 1
-    if not addedopts['type']:
-        type = 'auto'
-    else:
-        type = addedopts['type'][0]
     hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'],
                     shortcuts=dict(configopts('jars')))
     try:
-        if type == 'typedbytes':
-            import typedbytes
-            process = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
-                                % (hadenv, hadoop, streamingjar, path))
-            if addedopts['ascode'] and addedopts['ascode'][0] == 'yes':
-                outputs = dumpcode(typedbytes.PairedInput(process))
-            else:
-                outputs = dumptext(typedbytes.PairedInput(process))
-            for output in outputs:
-                print '\t'.join(output)
-            process.close()
+        import typedbytes
+        process = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
+                            % (hadenv, hadoop, streamingjar, path))
+        if addedopts['ascode'] and addedopts['ascode'][0] == 'yes':
+            outputs = dumpcode(typedbytes.PairedInput(process))
         else:
-            if type[:4] == 'auto':
-                codetype = 'autoascode'
-            elif type[:4] == 'text':
-                codetype = 'textascode'
-            else:
-                codetype = 'sequencefileascode'
-            process = os.popen('%s %s/bin/hadoop jar %s catpath %s %s'
-                                % (hadenv, hadoop, dumbojar, codetype, path))
-            if type[-6:] == 'ascode' or addedopts['ascode'] \
-            and addedopts['ascode'][0] == 'yes':
-                outputs = dumpcode(loadcode(process))
-            else:
-                outputs = dumptext(loadcode(process))
-            for output in outputs:
-                print '\t'.join(output)
-            process.close()
+            outputs = dumptext(typedbytes.PairedInput(process))
+        for output in outputs:
+            print '\t'.join(output)
+        process.close()
     except IOError:
         pass  # ignore
     return 0
@@ -1025,7 +954,7 @@ def doctest(prog):
     return int(failures > 0)
 
 
-if __name__ == '__main__':
+def dumbo():
     if len(sys.argv) < 2:
         print 'Usages:'
         print '  dumbo start <python program> [<options>]'
@@ -1064,3 +993,7 @@ if __name__ == '__main__':
         print >> sys.stderr, 'ERROR: unknown dumbo command:', sys.argv[1]
         retval = 1
     sys.exit(retval)
+
+
+if __name__ == '__main__':
+    dumbo()
