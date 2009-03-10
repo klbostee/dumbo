@@ -13,6 +13,7 @@ setup(
         ]
     },
     zip_safe = True,
+    install_requires = ['typedbytes'],
     test_suite = 'nose.collector',
     tests_require = ['nose']
 )
