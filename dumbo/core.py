@@ -326,6 +326,7 @@ class StreamingIteration(Iteration):
             addedopts['outputformat'] = ['sequencefile']
         outputformat_shortcuts = \
             {'code': 'org.apache.hadoop.mapred.SequenceFileOutputFormat',
+             'text': 'org.apache.hadoop.mapred.TextOutputFormat',
              'sequencefile': 'org.apache.hadoop.mapred.SequenceFileOutputFormat'}
         outputformat_shortcuts.update(configopts('outputformats', self.prog))
         outputformat = addedopts['outputformat'][0]
