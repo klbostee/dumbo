@@ -557,8 +557,3 @@ def iterreduce(data, redfunc):
 
 def itermapred(data, mapfunc, redfunc):
     return iterreduce(sorted(itermap(data, mapfunc)), redfunc)
-
-
-if __name__ == '__main__':
-    import dumbo.cmd
-    sys.exit(dumbo.cmd.main())
