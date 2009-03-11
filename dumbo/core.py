@@ -164,11 +164,17 @@ class Iteration(object):
         for param in addedopts['param']:
             self.opts.append(('cmdenv', param))
         if addedopts['parser'] and iter == 0:
-            self.opts.append(('cmdenv',
-                              'dumbo_parser=' + addedopts['parser'][0]))
+            parser = addedopts['parser'][0]
+            shortcuts = dict(configopts('parsers', self.prog))
+            if parser in shortcuts:
+                parser = shortcuts[parser]
+            self.opts.append(('cmdenv', 'dumbo_parser=' + parser))
         if addedopts['record'] and iter == 0:
-            self.opts.append(('cmdenv',
-                              'dumbo_record=' + addedopts['record'][0]))
+            record = addedopts['record'][0]
+            shortcuts = dict(configopts('records', self.prog))
+            if record in shortcuts:
+                record = shortcuts[record]
+            self.opts.append(('cmdenv', 'dumbo_record=' + record))
         return 0
 
 
