@@ -1,5 +1,6 @@
 import heapq
 from itertools import chain, imap, izip
+from math import sqrt
 
 
 def identitymapper(key, value):    
