@@ -1,4 +1,5 @@
-import dumbo,unittest
+import unittest
+from dumbo import core
 
 class TestMapRed(unittest.TestCase):
     def testwordcount(self):
@@ -7,7 +8,7 @@ class TestMapRed(unittest.TestCase):
         def reducer(key,values):
             yield key,sum(values)
         input = enumerate(['one two','two one two'])
-        output = dict(dumbo.itermapred(input,mapper,reducer))
+        output = dict(core.itermapred(input,mapper,reducer))
         self.assertEqual(output['one'],2)
         self.assertEqual(output['two'],3)
 

@@ -1,10 +1,11 @@
-import dumbo,unittest
+import unittest
+from dumbo import util
 
 class TestCoding(unittest.TestCase):
 
     def dotest(self,data):
-        dumped = "\t".join(dumbo.dumpcode([("dummy",data)]).next())
-        self.assertEqual(dumbo.loadcode([dumped]).next()[1],data)
+        dumped = "\t".join(util.dumpcode([("dummy",data)]).next())
+        self.assertEqual(util.loadcode([dumped]).next()[1],data)
 
     def testtuple(self):
         self.dotest(tuple())
