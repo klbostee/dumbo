@@ -154,7 +154,7 @@ class Iteration(object):
         else:
             self.opts.append(('hadoop', addedopts['hadoop'][0]))
             progincmd = self.prog.split('/')[-1]
-        memlim = ''
+        memlim = ' 262144000'  # 250MB limit by default
         if addedopts['memlimit']:
             memlim = ' ' + addedopts['memlimit'][0]
         self.opts.append(('mapper', '%s %s map %i%s' % (python,
