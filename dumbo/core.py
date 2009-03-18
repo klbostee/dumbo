@@ -538,28 +538,46 @@ def setstatus(message):
     print >> sys.stderr, 'reporter:status:%s' % message
 
 
+def valwrapper(data, valfunc):
+    for (key, value) in data:
+        try:
+            yield (key, valfunc(value))
+        except (ValueError, TypeError):
+            print >> sys.stderr, \
+                     'WARNING: skipping bad value (%s)' % str(value)
+            if os.environ.has_key('dumbo_debug'):
+                raise
+            incrcounter('Dumbo', 'Bad inputs', 1)
+
+
+def mapfunc_iter(data, mapfunc):
+    for (key, value) in data:
+        for output in mapfunc(key, value):
+            yield output
+
+
 def itermap(data, mapfunc, valfunc=None):
     if valfunc:
-        for (key, value) in data:
-            try:
-                for output in mapfunc(key, valfunc(value)):
-                    yield output
-            except (ValueError, TypeError):
-                print >> sys.stderr, \
-                         'WARNING: skipping bad value (%s)' % str(value)
-                if os.environ.has_key('dumbo_debug'):
-                    raise
-                incrcounter('Dumbo', 'Bad inputs', 1)
-    else:
-        for (key, value) in data:
-            for output in mapfunc(key, value):
-                yield output
+        data = valwrapper(data, valfunc)
+    try:
+        return mapfunc(data)
+    except TypeError:
+        return mapfunc_iter(data, mapfunc)
+
+
+def redfunc_iter(data, redfunc):
+    for (key, values) in data:
+        for output in redfunc(key, values):
+            yield output
 
 
 def iterreduce(data, redfunc):
-    for (key, values) in groupby(data, itemgetter(0)):
-        for output in redfunc(key, (v[1] for v in values)):
-            yield output
+    data = groupby(data, itemgetter(0))
+    data = ((key, (v[1] for v in values)) for key, values in data)
+    try:
+        return redfunc(data)
+    except TypeError:
+        return redfunc_iter(data, redfunc)
 
 
 def itermapred(data, mapfunc, redfunc):

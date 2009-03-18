@@ -1,5 +1,6 @@
 """
-Counts how many times each word occurs:
+Counts how many times each word occurs, using the alternative 
+(more low-level) interface to mappers/reducers:
 
 >>> import sys
 >>> from dumbo import cmd, util
@@ -13,11 +14,13 @@ Counts how many times each word occurs:
 6
 """
 
-def mapper(key,value):
-    for word in value.split(): yield word,1
+def mapper(data):
+    for key, value in data:
+        for word in value.split(): yield word,1
 
-def reducer(key,values):
-    yield key,sum(values)
+def reducer(data):
+    for key, values in data:
+        yield key,sum(values)
 
 if __name__ == "__main__":
     import dumbo
