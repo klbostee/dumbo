@@ -105,6 +105,27 @@ class MapRedBase(object):
     status = property(fset=setstatus)
 
 
+class JoinKey(object):
+
+    def __init__(self, body, isprimary=False):
+        self.body = body
+        self.isprimary = isprimary
+  
+    def __cmp__(self, other):
+        bodycmp = cmp(self.body, other.body)
+        if bodycmp:
+           return bodycmp
+        else:
+           return cmp(self.isprimary, other.isprimary)
+
+    @classmethod
+    def fromdump(cls, dump):
+        return cls(dump[0], dump[1] == 1)
+
+    def dump(self):
+        return (self.body, 2 - int(self.isprimary))
+
+
 class Iteration(object):
 
     def __init__(self, prog, opts):
@@ -122,7 +143,8 @@ class Iteration(object):
                                         'memlimit',
                                         'param',
                                         'parser',
-                                        'record'])
+                                        'record',
+                                        'joinkeys'])
         if addedopts['fake'] and addedopts['fake'][0] == 'yes':
             def dummysystem(*args, **kwargs):
                 return 0
@@ -175,6 +197,12 @@ class Iteration(object):
             if record in shortcuts:
                 record = shortcuts[record]
             self.opts.append(('cmdenv', 'dumbo_record=' + record))
+        if addedopts['joinkeys'] and addedopts['joinkeys'][0] == 'yes':
+            self.opts.append(('cmdenv', 'dumbo_joinkeys=yes'))
+            self.opts.append(('partitioner',
+                              'org.apache.hadoop.mapred.lib.BinaryPartitioner'))
+            self.opts.append(('jobconf',
+                              'mapred.binary.partitioner.right.offset=5'))
         return 0
 
 
@@ -431,7 +459,9 @@ def run(mapper,
                     mapconf()
                 if os.environ.has_key('dumbo_addpath'):
                     path = os.environ['map_input_file']
-                    inputs = (((path, key), value) for (key, value) in inputs)
+                    inputs = (((path, k), v) for (k, v) in inputs)
+                if os.environ.has_key('dumbo_joinkeys'):
+                    inputs = ((JoinKey(k), v) for (k, v) in inputs)
                 if os.environ.has_key('dumbo_parser'):
                     parser = os.environ['dumbo_parser']
                     clsname = parser.split('.')[-1]          
@@ -457,6 +487,8 @@ def run(mapper,
                         buffersize = int(memlim * 0.33) / 512  # educated guess
                         print >> sys.stderr, 'INFO: buffersize =', buffersize
                     outputs = iterreduce(sorted(outputs, buffersize), combiner)
+                if os.environ.has_key('dumbo_joinkeys'):
+                    outputs = ((jk.dump(), v) for (jk, v) in outputs)
                 if mapclose:
                     mapclose()
                 if os.environ.has_key('stream_map_output') and \
@@ -477,7 +509,11 @@ def run(mapper,
                     inputs = loadcode(line[:-1] for line in sys.stdin)
                 if redconf:
                     redconf()
+                if os.environ.has_key('dumbo_joinkeys'):
+                    inputs = ((JoinKey.fromdump(k), v) for (k, v) in inputs)
                 outputs = iterreduce(inputs, reducer)
+                if os.environ.has_key('dumbo_joinkeys'):
+                    outputs = ((jk.body, v) for (jk, v) in outputs)
                 if redclose:
                     redclose()
                 if os.environ.has_key('stream_reduce_output') and \
