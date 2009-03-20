@@ -119,11 +119,18 @@ class JoinKey(object):
            return cmp(self.isprimary, other.isprimary)
 
     @classmethod
+    def fromjoinkey(cls, jk):
+        return cls(jk.body, jk.isprimary)
+
+    @classmethod
     def fromdump(cls, dump):
         return cls(dump[0], dump[1] == 1)
 
     def dump(self):
         return (self.body, 2 - int(self.isprimary))
+
+    def __repr__(self):
+        return repr(self.dump())
 
 
 class Iteration(object):
@@ -487,7 +494,12 @@ def run(mapper,
                     if (not buffersize) and memlim:
                         buffersize = int(memlim * 0.33) / 512  # educated guess
                         print >> sys.stderr, 'INFO: buffersize =', buffersize
-                    outputs = iterreduce(sorted(outputs, buffersize), combiner)
+                    inputs = sorted(outputs, buffersize)
+                    if os.environ.has_key('dumbo_joinkeys'):
+                        outputs = iterreduce(inputs, combiner,
+                                             keyfunc=JoinKey.fromjoinkey)
+                    else:
+                        outputs = iterreduce(inputs, combiner)
                 if os.environ.has_key('dumbo_joinkeys'):
                     outputs = ((jk.dump(), v) for (jk, v) in outputs)
                 if mapclose:
@@ -511,10 +523,11 @@ def run(mapper,
                 if redconf:
                     redconf()
                 if os.environ.has_key('dumbo_joinkeys'):
-                    inputs = ((JoinKey.fromdump(k), v) for (k, v) in inputs)
-                outputs = iterreduce(inputs, reducer)
-                if os.environ.has_key('dumbo_joinkeys'):
+                    outputs = iterreduce(inputs, reducer,
+                                         keyfunc=JoinKey.fromdump)
                     outputs = ((jk.body, v) for (jk, v) in outputs)
+                else:
+                    outputs = iterreduce(inputs, reducer)
                 if redclose:
                     redclose()
                 if os.environ.has_key('stream_reduce_output') and \
@@ -608,9 +621,11 @@ def redfunc_iter(data, redfunc):
             yield output
 
 
-def iterreduce(data, redfunc):
+def iterreduce(data, redfunc, keyfunc=None):
     data = groupby(data, itemgetter(0))
     data = ((key, (v[1] for v in values)) for key, values in data)
+    if keyfunc:
+        data = ((keyfunc(key), values) for key, values in data)
     try:
         return redfunc(data)
     except TypeError:

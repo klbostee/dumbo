@@ -18,6 +18,8 @@ def mapper1(key, value):
     yield key, value
     
 class Reducer1:
+    def __init__(self):
+        self.hostname = "unknown"
     def __call__(self, key, values):
         if key.isprimary:
             self.hostname = values.next()
@@ -25,6 +27,7 @@ class Reducer1:
             key.body = self.hostname
             for value in values:
                 yield key, value
+            self.hostname = "unknown"
 
 def mapper2(key, value):
     yield key, 1
