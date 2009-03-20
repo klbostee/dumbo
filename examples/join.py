@@ -1,10 +1,8 @@
 """
 Joins hostnames with logs and counts number of logs per host:
 
->>> import sys
 >>> from dumbo import cmd, util
->>> opts = [('python',sys.executable)]
->>> opts += [('input','hostnames.code'),('input','logs.code')]
+>>> opts = [('input','hostnames.code'),('input','logs.code')]
 >>> opts += [('inputformat','code'),('output','counts.code')]
 >>> logfile = open('log.txt','a')
 >>> cmd.start('join.py',opts,stdout=logfile,stderr=logfile)

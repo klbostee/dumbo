@@ -203,6 +203,7 @@ class Iteration(object):
                               'org.apache.hadoop.mapred.lib.BinaryPartitioner'))
             self.opts.append(('jobconf',
                               'mapred.binary.partitioner.right.offset=5'))
+        self.opts.append(('libegg', re.sub('\.egg.*$', '.egg', __file__)))
         return 0
 
 
@@ -246,7 +247,8 @@ class UnixIteration(Iteration):
         else:
             (mpv, spv, rpv) = ('', '', '')
         python = addedopts['python'][0]
-        encodepipe = python + ' -m dumbo encodepipe -file ' + ' -file '.join(inputs)
+        encodepipe = pyenv + ' ' + python + \
+                     ' -m dumbo encodepipe -file ' + ' -file '.join(inputs)
         if addedopts['inputformat'] and addedopts['inputformat'][0] == 'code':
             encodepipe += ' -alreadycoded yes'
         if addedopts['addpath'] and addedopts['addpath'][0] == 'yes':
@@ -288,7 +290,6 @@ class StreamingIteration(Iteration):
         if retval != 0:
             return retval
         self.opts.append(('file', self.prog))
-        self.opts.append(('libegg', re.sub('\.egg.*$', '.egg', __file__)))
         addedopts = getopts(self.opts, ['hadoop',
                                         'name',
                                         'delinputs',

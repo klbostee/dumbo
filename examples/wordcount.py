@@ -1,10 +1,8 @@
 """
 Counts how many times each word occurs:
 
->>> import sys
 >>> from dumbo import cmd, util
->>> opts = [('python', sys.executable)]
->>> opts += [('input','brian.txt'),('output','counts.txt')]
+>>> opts = [('input','brian.txt'),('output','counts.txt')]
 >>> logfile = open('log.txt','a')
 >>> cmd.start('wordcount.py',opts,stdout=logfile,stderr=logfile)
 0

@@ -1,10 +1,8 @@
 """
 Counts how many times each non-excluded word occurs:
 
->>> import sys
 >>> from dumbo import cmd, util
->>> opts = [('python', sys.executable)]
->>> opts += [('excludes','excludes.txt'),('output','counts.txt')]
+>>> opts = [('excludes','excludes.txt'),('output','counts.txt')]
 >>> logfile = open('log.txt','a')
 >>> cmd.start('oowordcount.py',opts,stdout=logfile,stderr=logfile)
 0

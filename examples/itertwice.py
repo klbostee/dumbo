@@ -1,10 +1,8 @@
 """
 Example of two iterations in one Dumbo program:
 
->>> import sys
 >>> from dumbo import cmd, util
->>> opts = [('python', sys.executable)]
->>> opts += [('input','brian.txt'),('output','counts.txt')]
+>>> opts = [('input','brian.txt'),('output','counts.txt')]
 >>> logfile = open('log.txt','a')
 >>> cmd.start('itertwice.py',opts,stdout=logfile,stderr=logfile)
 0
