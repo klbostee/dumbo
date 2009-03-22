@@ -1,15 +1,6 @@
 """
 Counts how many times each word occurs, using the alternative 
-(more low-level) interface to mappers/reducers:
-
->>> from dumbo import cmd, util
->>> opts = [('input','brian.txt'),('output','counts.txt')]
->>> logfile = open('log.txt','a')
->>> cmd.start('wordcount.py',opts,stdout=logfile,stderr=logfile)
-0
->>> output = dict(util.loadcode(open('counts.txt')))
->>> int(output['Brian'])
-6
+(more low-level) interface to mappers/reducers.
 """
 
 def mapper(data):

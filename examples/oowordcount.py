@@ -1,14 +1,5 @@
 """
-Counts how many times each non-excluded word occurs:
-
->>> from dumbo import cmd, util
->>> opts = [('excludes','excludes.txt'),('output','counts.txt')]
->>> logfile = open('log.txt','a')
->>> cmd.start('oowordcount.py',opts,stdout=logfile,stderr=logfile)
-0
->>> output = dict(util.loadcode(open('counts.txt')))
->>> int(output['Brian'])
-6
+Counts how many times each non-excluded word occurs.
 """
 
 class Mapper:
@@ -29,7 +20,6 @@ def runner(job):
 def starter(prog):
     excludes = prog.delopt("excludes")
     if excludes: prog.addopt("param","excludes="+excludes)
-    prog.addopt("input","brian.txt")
 
 if __name__ == "__main__":
     import dumbo

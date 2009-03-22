@@ -1,15 +1,5 @@
 """
-Joins hostnames with logs and counts number of logs per host:
-
->>> from dumbo import cmd, util
->>> opts = [('input','hostnames.code'),('input','logs.code')]
->>> opts += [('inputformat','code'),('output','counts.code')]
->>> logfile = open('log.txt','a')
->>> cmd.start('join.py',opts,stdout=logfile,stderr=logfile)
-0
->>> output = dict(util.loadcode(open('counts.code')))
->>> int(output['node1'])
-5
+Joins hostnames with logs and counts number of logs per host.
 """
 
 def mapper1(key, value):

@@ -1,14 +1,5 @@
 """
-Example of two iterations in one Dumbo program:
-
->>> from dumbo import cmd, util
->>> opts = [('input','brian.txt'),('output','counts.txt')]
->>> logfile = open('log.txt','a')
->>> cmd.start('itertwice.py',opts,stdout=logfile,stderr=logfile)
-0
->>> output = dict(util.loadcode(open('counts.txt')))
->>> int(output['e'])
-14
+Example of two iterations in one Dumbo program.
 """
 
 def mapper1(key,value):
