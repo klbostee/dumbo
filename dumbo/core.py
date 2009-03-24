@@ -311,7 +311,8 @@ class StreamingIteration(Iteration):
                                         'cachearchive',
                                         'codewritable',
                                         'addpath',
-                                        'python'])
+                                        'python',
+                                        'streamoutput'])
         hadoop = findhadoop(addedopts['hadoop'][0])
         streamingjar = findjar(hadoop, 'streaming')
         if not streamingjar:
@@ -328,9 +329,21 @@ class StreamingIteration(Iteration):
         else:
             self.opts.append(('file', modpath)) 
         self.opts.append(('jobconf', 'stream.map.input=typedbytes'))
-        self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
         self.opts.append(('jobconf', 'stream.reduce.input=typedbytes'))
-        self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
+        if addedopts['numreducetasks'] and addedopts['numreducetasks'][0] == '0':
+            self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
+            if addedopts['streamoutput']:
+                id_ = addedopts['streamoutput'][0]
+                self.opts.append(('jobconf', 'stream.map.output=' + id_))
+            else: 
+                self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
+        else:
+            self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
+            if addedopts['streamoutput']:
+                id_ = addedopts['streamoutput'][0]
+                self.opts.append(('jobconf', 'stream.reduce.output=' + id_))
+            else:
+                self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
         if not addedopts['name']:
             self.opts.append(('jobconf', 'mapred.job.name='
                               + self.prog.split('/')[-1]))
