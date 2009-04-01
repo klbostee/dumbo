@@ -209,7 +209,7 @@ class Iteration(object):
             self.opts.append(('partitioner',
                               'org.apache.hadoop.mapred.lib.BinaryPartitioner'))
             self.opts.append(('jobconf',
-                              'mapred.binary.partitioner.right.offset=5'))
+                              'mapred.binary.partitioner.right.offset=-6'))
         self.opts.append(('libegg', re.sub('\.egg.*$', '.egg', __file__)))
         return 0
 
