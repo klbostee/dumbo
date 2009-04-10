@@ -472,7 +472,8 @@ def run(mapper,
                 if os.environ.has_key('stream_map_input') and \
                 os.environ['stream_map_input'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: inputting typed bytes"
-                    import typedbytes
+                    try: import ctypedbytes as typedbytes
+                    except ImportError: import typedbytes
                     inputs = typedbytes.PairedInput(sys.stdin).reads()
                 else:
                     inputs = loadcode(line[:-1] for line in sys.stdin)
@@ -520,7 +521,8 @@ def run(mapper,
                 if os.environ.has_key('stream_map_output') and \
                 os.environ['stream_map_output'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: outputting typed bytes"
-                    import typedbytes
+                    try: import ctypedbytes as typedbytes
+                    except ImportError: import typedbytes
                     typedbytes.PairedOutput(sys.stdout).writes(outputs)
                 else:
                     for output in dumpcode(outputs):
@@ -529,7 +531,8 @@ def run(mapper,
                 if os.environ.has_key('stream_reduce_input') and \
                 os.environ['stream_reduce_input'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: inputting typed bytes"
-                    import typedbytes
+                    try: import ctypedbytes as typedbytes
+                    except ImportError: import typedbytes
                     inputs = typedbytes.PairedInput(sys.stdin).reads()
                 else:
                     inputs = loadcode(line[:-1] for line in sys.stdin)
@@ -546,7 +549,8 @@ def run(mapper,
                 if os.environ.has_key('stream_reduce_output') and \
                 os.environ['stream_reduce_output'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: outputting typed bytes"
-                    import typedbytes
+                    try: import ctypedbytes as typedbytes
+                    except ImportError: import typedbytes
                     typedbytes.PairedOutput(sys.stdout).writes(outputs)
                 else:
                     for output in dumpcode(outputs):
