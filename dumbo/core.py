@@ -167,7 +167,8 @@ class Iteration(object):
                                         'param',
                                         'parser',
                                         'record',
-                                        'joinkeys'])
+                                        'joinkeys',
+                                        'hadoopconf'])
         if addedopts['fake'] and addedopts['fake'][0] == 'yes':
             def dummysystem(*args, **kwargs):
                 return 0
@@ -226,6 +227,8 @@ class Iteration(object):
                               'org.apache.hadoop.mapred.lib.BinaryPartitioner'))
             self.opts.append(('jobconf',
                               'mapred.binary.partitioner.right.offset=-6'))
+        for hadoopconf in addedopts['hadoopconf']:
+            self.opts.append(('jobconf', hadoopconf))
         self.opts.append(('libegg', re.sub('\.egg.*$', '.egg', __file__)))
         return 0
 
