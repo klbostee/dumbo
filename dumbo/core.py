@@ -440,7 +440,9 @@ def main(runner, starter=None):
         if errormsg:
             print >> sys.stderr, errormsg
             sys.exit(1)
-        program.start()
+        retval = program.start()
+        if retval != 0:
+            sys.exit(retval)
     else:
         job = Job()
         errormsg = runner(job)
