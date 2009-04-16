@@ -490,6 +490,11 @@ def run(mapper,
                 else:
                     combiner = combinercls()
             if sys.argv[1].startswith('map'):
+                try:
+                    print >> sys.stderr, "INFO: consuming %s" % \
+                                         os.environ['map_input_file']
+                except KeyError:
+                    pass
                 if os.environ.has_key('stream_map_input') and \
                 os.environ['stream_map_input'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: inputting typed bytes"
