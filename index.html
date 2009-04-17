@@ -10,7 +10,7 @@
 	<style type="text/css">
 		body {
   		margin-top: 1.0em;
-  		background-color: #298bc1;
+  		background-color: #ababab;
 		  font-family: "helvetica"; 
   		color: #ffffff;
     }
@@ -18,12 +18,12 @@
       margin: 0 auto;
       width: 700px;
     }
-		h1 { font-size: 3.8em; color: #d6743e; margin-bottom: 3px; }
+		h1 { font-size: 3.8em; color: #000000; margin-bottom: 3px; }
 		h1 .small { font-size: 0.4em; }
 		h1 a { text-decoration: none }
-		h2 { font-size: 1.5em; color: #d6743e; }
-    h3 { text-align: center; color: #d6743e; }
-    a { color: #d6743e; }
+		h2 { font-size: 1.5em; color: #333333; }
+    h3 { text-align: center; color: #777777; }
+    a { color: #000000; }
     .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
     .download { float: right; }
 		pre { background: #000; color: #fff; padding: 15px;}
@@ -39,37 +39,50 @@
   <div id="container">
 
     <div class="download">
-      <a href="http://github.com/klbostee/dumbo/zipball/master">
+      <a href="http://github.com/klbostee/dumbo/downloads">
         <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
-      <a href="http://github.com/klbostee/dumbo/tarball/master">
+      <a href="http://github.com/klbostee/dumbo/downloads">
         <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
     </div>
       
-    <h1><a href="http://github.com/klbostee/dumbo">Dumbo</a> 
-      <span class="small">by <a href="http://github.com/klbostee">klbostee</a></small></h1>
+    <h1><a href="http://github.com/klbostee/dumbo">Dumbo</a></h1>
 
     <div class="description">
-      Python module that allows you to easily write and run Hadoop programs.
+    Dumbo is a project that allows you to easily write and run <a href="http://hadoop.apache.org/core" style="color:#fff;">Hadoop</a> 
+    programs in Python (it’s named after Disney’s flying circus elephant, 
+    since the logo of Hadoop is an elephant and Python was named after the BBC series “Monty Python’s Flying Circus”). More generally, 
+    Dumbo can be considered to be a convenient Python API for writing MapReduce programs.
     </div>
 
-    <h2>License</h2>
-    <p>Apache Software License (ASF)</p>
+<p><pre>
+def mapper(key, value):
+    for word in value.split(): yield word, 1
 
-    <h2>Download</h2>
-    <p>
-      You can download the lastest development version of this project in either
-      <a href="http://github.com/klbostee/dumbo/zipball/master">zip</a> or
-      <a href="http://github.com/klbostee/dumbo/tarball/master">tar</a> formats.
-    </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/klbostee/dumbo</pre>
-    </p>
-      
-    <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/klbostee/dumbo">klbostee/dumbo</a>
-    </div>
+def reducer(key, values):
+    yield key, sum(values)
+
+if __name__ == "__main__":
+    import dumbo
+    dumbo.run(mapper, reducer)
+</pre></p>
+
+    <br/>
+
+    <h2>Documentation</h2>
+
+    <ul>
+    <li><a href="http://wiki.github.com/klbostee/dumbo">Wiki</a></li>
+    <li><a href="http://dumbotics.com/">Blog</a></li>
+    </ul>
+
+    <h2>Development</h2>
     
+    <ul>
+    <li><a href="http://github.com/klbostee/dumbo/tree/master">Source</a></li>
+    <li><a href="http://dumbo.assembla.com/spaces/dumbo/tickets">Tickets</a></li>
+    <li><a href="http://dumbotics.com/2009/03/12/how-to-contribute/">How to contribute</a>
+    </ul>
+
   </div>
 
   
