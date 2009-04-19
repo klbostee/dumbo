@@ -63,7 +63,7 @@ def reducer(key, values):
 
 if __name__ == "__main__":
     import dumbo
-    dumbo.run(mapper, reducer)
+    dumbo.run(mapper, reducer, combiner=reducer)
 </pre></p>
 
     <br/>
