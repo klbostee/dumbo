@@ -310,6 +310,8 @@ class StreamingIteration(Iteration):
     def __init__(self, prog, opts):
         Iteration.__init__(self, prog, opts)
         self.opts += configopts('streaming', prog, self.opts)
+        hadoop = getopt(self.opts, 'hadoop', delete=False)[0]
+        self.opts += configopts('streaming_' + hadoop, prog, self.opts)
 
     def run(self):
         retval = Iteration.run(self)
