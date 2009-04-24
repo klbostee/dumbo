@@ -205,3 +205,14 @@ def envdef(varname,
         return '%s=%s' % (varname, path)
     else:
         return '%s="%s"' % (varname, ':'.join((path, '$' + varname)))
+
+
+def iizip(*iterables):
+    """
+    The C{izip} function from the C{itertools} module is equivalent
+    to C{lambda *iters: (tuple(item) for item in iizip(*iters))}.
+    """
+    iterables = map(iter, iterables)
+    while iterables:
+        yield (it.next() for it in iterables)
+

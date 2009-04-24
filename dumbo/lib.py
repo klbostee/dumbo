@@ -15,8 +15,10 @@
 # limitations under the License.
 
 import heapq
-from itertools import chain, imap, izip
+from itertools import chain, imap
 from math import sqrt
+
+from dumbo.util import iizip
 
 
 def identitymapper(key, value):    
@@ -33,7 +35,7 @@ def sumreducer(key, values):
 
 
 def sumsreducer(key, values):
-    yield (key, tuple(imap(sum, izip(*values))))       
+    yield (key, tuple(imap(sum, iizip(*values))))       
 
 
 def nlargestreducer(n, key=None):                      
@@ -60,7 +62,7 @@ def nsmallestcombiner(n, key=None):
 
 
 def statsreducer(key, values):
-    columns = izip(*values)
+    columns = iizip(*values)
     s0 = sum(columns.next())
     s1 = sum(columns.next())
     s2 = sum(columns.next())
@@ -72,7 +74,7 @@ def statsreducer(key, values):
 
 
 def statscombiner(key, values):
-    columns = izip(*((1, value, value**2, value, value) for value in values))
+    columns = iizip(*((1, value, value**2, value, value) for value in values))
     s0 = sum(columns.next())
     s1 = sum(columns.next())
     s2 = sum(columns.next())
