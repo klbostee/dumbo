@@ -63,7 +63,7 @@ def nsmallestcombiner(n, key=None):
 
 def statsreducer(key, values):
     columns = iizip(*values)
-    s0 = sum(columns.next()) # n
+    s0 = float(sum(columns.next())) # n
     s1 = sum(columns.next()) # sum(x)
     s2 = sum(columns.next()) # sum(x**2)
     minimum = min(columns.next())
