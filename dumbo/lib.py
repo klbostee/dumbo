@@ -63,13 +63,13 @@ def nsmallestcombiner(n, key=None):
 
 def statsreducer(key, values):
     columns = iizip(*values)
-    s0 = sum(columns.next())
-    s1 = sum(columns.next())
-    s2 = sum(columns.next())
+    s0 = sum(columns.next()) # n
+    s1 = sum(columns.next()) # sum(x)
+    s2 = sum(columns.next()) # sum(x**2)
     minimum = min(columns.next())
     maximum = max(columns.next())
     mean = float(s1) / s0
-    std = sqrt(s0 * s2 - s1**2) / s0
+    std = sqrt((s2-s1**2/s0)/(s0-1)) # sample standard deviation
     yield (key, (s0, mean, std, minimum, maximum))
 
 
