@@ -473,19 +473,19 @@ def run(mapper,
             memlim = int(sys.argv[3])
             resource.setrlimit(resource.RLIMIT_AS, (memlim, memlim))
         if iterarg == iter:
-            if type(mapper) == types.ClassType:
+            if type(mapper) in (types.ClassType, type):
                 mappercls = type('DumboMapper', (mapper, MapRedBase), {})
                 if hasattr(mappercls, 'map'):
                     mapper = mappercls().map
                 else:
                     mapper = mappercls()
-            if type(reducer) == types.ClassType:
+            if type(reducer) in (types.ClassType, type):
                 reducercls = type('DumboReducer', (reducer, MapRedBase), {})
                 if hasattr(reducercls, 'reduce'):
                     reducer = reducercls().reduce
                 else:
                     reducer = reducercls()
-            if type(combiner) == types.ClassType:
+            if type(combiner) in (types.ClassType, type):
                 combinercls = type('DumboCombiner', (combiner, MapRedBase), {})
                 if hasattr(combinercls, 'reduce'):
                     combiner = combinercls().reduce
