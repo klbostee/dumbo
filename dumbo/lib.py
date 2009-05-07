@@ -67,7 +67,9 @@ def statsreducer(key, values):
     minimum = min(columns.next())
     maximum = max(columns.next())
     mean = float(s1) / s0
-    std = sqrt((s2-s1**2/float(s0))/(s0-1)) # sample standard deviation
+    std = 0
+    if s0 > 1:
+        std = sqrt((s2-s1**2/float(s0))/(s0-1)) # sample standard deviation
     yield (key, (s0, mean, std, minimum, maximum))
 
 
