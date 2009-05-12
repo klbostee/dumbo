@@ -14,17 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-The Dumbo Python module. 
 
-Please refer to http://wiki.github.com/klbostee/dumbo for more info.
-"""
+class opt(object):
 
-from dumbo.core import run, main, Job, Program, Counter
-from dumbo.lib import *
-from dumbo.decor import *
+    def __init__(self, name, value):
+        self.opt = (name, value)
 
-if __name__ == '__main__':
-    import sys
-    from dumbo.cmd import dumbo
-    sys.exit(dumbo())
+    def __call__(self, func):
+        if hasattr(func, 'opts'):
+            func.opts.append(self.opt)
+        else:
+            func.opts = [self.opt]
+        return func

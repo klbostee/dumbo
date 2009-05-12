@@ -462,6 +462,7 @@ def run(mapper,
         redconf=None,
         mapclose=None,
         redclose=None,
+        opts=None,
         iter=0,
         itercnt=1):
     if len(sys.argv) > 1 and not sys.argv[1][0] == '-':
@@ -587,7 +588,13 @@ def run(mapper,
                 for output in dumpcode(inputs):
                     print '\t'.join(output)
     else:
-        opts = parseargs(sys.argv[1:])
+        if not opts:
+            opts = []
+        if hasattr(mapper, 'opts'):
+            opts += mapper.opts
+        if hasattr(reducer, 'opts'):
+            opts += reducer.opts
+        opts += parseargs(sys.argv[1:])
         newopts = {}
         newopts['iteration'] = str(iter)
         newopts['itercount'] = str(itercnt)
