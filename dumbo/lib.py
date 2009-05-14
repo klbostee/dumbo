@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import heapq
+import os
 from itertools import chain, imap, izip
 from math import sqrt
 
@@ -81,3 +82,40 @@ def statscombiner(key, values):
     minimum = min(columns.next())
     maximum = max(columns.next())
     yield (key, (s0, s1, s2, minimum, maximum))
+
+
+class MultiMapper(object):
+
+    opts = [("addpath", "yes")]
+
+    def __new__(cls):
+        if os.environ.get("dumbo_joinkeys", "no") == "yes":
+            cls.__call__ = cls.__call__joinkey
+        else:
+            cls.__call__ = cls.__call__normalkey
+        return object.__new__(cls) 
+    
+    def __init__(self):
+        self.mappers = []
+
+    def __call__normalkey(self, data):
+        mappers = self.mappers
+        for key, value in data:
+            path, key = key
+            for pattern, mapper in mappers:
+                if pattern in path:
+                    for output in mapper(key, value):
+                        yield output
+
+    def __call__joinkey(self, data):
+        mappers = self.mappers
+        for key, value in data:
+            path = key.body[0]
+            key.body = key.body[1]
+            for pattern, mapper in mappers:
+                if pattern in path:
+                    for output in mapper(key, value):
+                        yield output
+
+    def add(self, pattern, mapper):
+        self.mappers.append((pattern, mapper)) 
