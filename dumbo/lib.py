@@ -16,8 +16,11 @@
 
 import heapq
 import os
+import types
 from itertools import chain, imap, izip
 from math import sqrt
+
+from dumbo.core import MapRedBase
 
 
 def identitymapper(key, value):    
@@ -96,10 +99,21 @@ class MultiMapper(object):
         return object.__new__(cls) 
     
     def __init__(self):
-        self.mappers = []
+        self._mappers = []
+
+    def itermappers(self):
+        for pattern, mapper in self._mappers:
+            if type(mapper) in (types.ClassType, type):
+                mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+                if hasattr(mappercls, 'map'):
+                    yield (pattern, mappercls().map)
+                else:
+                    yield (pattern, mappercls())
+            else:
+                yield (pattern, mapper)
 
     def __call__normalkey(self, data):
-        mappers = self.mappers
+        mappers = list(self.itermappers())
         for key, value in data:
             path, key = key
             for pattern, mapper in mappers:
@@ -108,7 +122,7 @@ class MultiMapper(object):
                         yield output
 
     def __call__joinkey(self, data):
-        mappers = self.mappers
+        mappers = list(self.itermappers())
         for key, value in data:
             path = key.body[0]
             key.body = key.body[1]
@@ -118,4 +132,4 @@ class MultiMapper(object):
                         yield output
 
     def add(self, pattern, mapper):
-        self.mappers.append((pattern, mapper)) 
+        self._mappers.append((pattern, mapper)) 

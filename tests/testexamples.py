@@ -62,6 +62,17 @@ class TestExamples(unittest.TestCase):
         output = dict(util.loadcode(open(self.outfile)))
         self.assertEqual(5, int(output['node1']))
 
+    def testmulticount(self):
+        opts = [('input', self.exdir+'brian.txt'),
+                ('input', self.exdir+'eno.txt'),
+                ('output', self.outfile)]
+        retval = cmd.start(self.exdir+'multicount.py', opts,
+                           stdout=self.logfile, stderr=self.logfile)
+        self.assertEqual(0, retval)
+        output = dict(util.loadcode(open(self.outfile)))
+        self.assertEqual(6, int(output[('A', 'Brian')]))
+        self.assertEqual(6, int(output[('B', 'Eno')]))        
+    
 
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(TestExamples)
