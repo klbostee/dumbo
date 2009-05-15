@@ -19,6 +19,7 @@ import os
 import types
 from itertools import chain, imap, izip
 from math import sqrt
+from copy import copy
 
 from dumbo.core import MapRedBase
 
@@ -89,8 +90,6 @@ def statscombiner(key, values):
 
 class MultiMapper(object):
 
-    opts = [("addpath", "yes")]
-
     def __new__(cls):
         if os.environ.get("dumbo_joinkeys", "no") == "yes":
             cls.__call__ = cls.__call__joinkey
@@ -100,6 +99,7 @@ class MultiMapper(object):
     
     def __init__(self):
         self._mappers = []
+        self.opts = [("addpath", "yes")]
 
     def itermappers(self):
         for pattern, mapper in self._mappers:
@@ -132,4 +132,20 @@ class MultiMapper(object):
                         yield output
 
     def add(self, pattern, mapper):
-        self._mappers.append((pattern, mapper)) 
+        self._mappers.append((pattern, mapper))
+        if hasattr(mapper, 'opts'):
+            self.opts += mapper.opts
+
+
+class JoinReducer(object):
+
+    opts = [("joinkeys", "yes")]
+
+    def __call__(self, key, values):
+        if key.isprimary:
+            self.primary(key.body, values)
+        else:
+            for k, v in self.secondary(key.body, values):
+                jk = copy(key)
+                jk.body = k
+                yield jk, v

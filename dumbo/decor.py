@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import copy
+
 
 class opt(object):
 
@@ -26,3 +28,31 @@ class opt(object):
         else:
             func.opts = [self.opt]
         return func
+
+
+class joinmapper(object):
+
+    def __init__(self, isprimary):
+        self.isprimary = isprimary
+        
+    def __call__(self, mapper):
+        if len(mapper.func_code.co_varnames) != 2:
+            raise TypeError('joinmapper has to take two arguments')
+        isprimary = self.isprimary  # avoid additional lookups
+        def wrapper(key, value):
+            key.isprimary = isprimary
+            for k, v in mapper(key.body, value):
+                jk = copy(key)
+                jk.body = k
+                yield jk, v
+        wrapper.opts = [('joinkeys', 'yes')]
+        if hasattr(mapper, 'opts'):
+            wrapper.opts += mapper.opts
+        return wrapper
+        
+
+def primary(mapper):
+    return joinmapper(isprimary=True)(mapper)
+
+def secondary(mapper):
+    return joinmapper(isprimary=False)(mapper)
