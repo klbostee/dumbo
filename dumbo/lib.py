@@ -154,3 +154,12 @@ class JoinReducer(object):
                 jk = copy(key)
                 jk.body = k
                 yield jk, v
+
+    def primary(self, key, values):
+        for value in values:
+            yield key, value
+
+    def secondary(self, key, values):
+        for value in values:
+            yield key, value
+
