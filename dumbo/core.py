@@ -277,7 +277,7 @@ class UnixIteration(Iteration):
                      ' -m dumbo encodepipe -file ' + ' -file '.join(inputs)
         if addedopts['inputformat'] and addedopts['inputformat'][0] == 'code':
             encodepipe += ' -alreadycoded yes'
-        if addedopts['addpath'] and addedopts['addpath'][0] == 'yes':
+        if addedopts['addpath'] and addedopts['addpath'][0] != 'no':
             encodepipe += ' -addpath yes'
         if addedopts['numreducetasks'] and addedopts['numreducetasks'][0] == '0':
             retval = execute("%s | %s %s %s %s > '%s'" % (encodepipe,
@@ -409,7 +409,7 @@ class StreamingIteration(Iteration):
         if outputformat_shortcuts.has_key(outputformat.lower()):
             outputformat = outputformat_shortcuts[outputformat.lower()]
         self.opts.append(('outputformat', outputformat))
-        if addedopts['addpath'] and addedopts['addpath'][0] == 'yes':
+        if addedopts['addpath'] and addedopts['addpath'][0] != 'no':
             self.opts.append(('cmdenv', 'dumbo_addpath=true'))
         pyenv = envdef('PYTHONPATH',
                        addedopts['libegg'],
@@ -603,12 +603,14 @@ def run(mapper,
             print >> sys.stderr, 'ERROR: no output path given'
             sys.exit(1)
         preoutputsopt = getopt(opts, 'preoutputs')
+        addpathopt = getopt(opts, 'addpath', delete=False)
         if iter != 0:
             newopts['input'] = outputopt[0] + "_pre" + str(iter)
             if not (preoutputsopt and preoutputsopt[0] == 'yes'):
                 newopts['delinputs'] = 'yes'
             newopts['inputformat'] = 'code'
-            newopts['addpath'] = 'no'
+            if addpathopt and addpathopt[0] == 'yes':  # not when == 'iter'
+                newopts['addpath'] = 'no'
         if iter < itercnt - 1:
             newopts['output'] = outputopt[0] + "_pre" + str(iter + 1)
             newopts['outputformat'] = 'code'

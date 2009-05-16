@@ -99,7 +99,7 @@ class MultiMapper(object):
     
     def __init__(self):
         self._mappers = []
-        self.opts = [("addpath", "yes")]
+        self.opts = [("addpath", "iter")]
 
     def itermappers(self):
         for pattern, mapper in self._mappers:
