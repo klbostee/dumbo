@@ -143,7 +143,12 @@ class JoinReducer(object):
 
     def __call__(self, key, values):
         if key.isprimary:
-            self.primary(key.body, values)
+            output = self.primary(key.body, values)
+            if output:
+                for k, v in output:
+                    jk = copy(key)
+                    jk.body = k
+                    yield jk, v
         else:
             for k, v in self.secondary(key.body, values):
                 jk = copy(key)
