@@ -16,6 +16,8 @@
 
 from copy import copy
 
+from dumbo.lib import PrimaryMapper, SecondaryMapper
+
 
 class opt(object):
 
@@ -30,29 +32,8 @@ class opt(object):
         return func
 
 
-class joinmapper(object):
-
-    def __init__(self, isprimary):
-        self.isprimary = isprimary
-        
-    def __call__(self, mapper):
-        if mapper.func_code.co_argcount != 2:
-            raise TypeError('joinmapper has to take two arguments')
-        isprimary = self.isprimary  # avoid additional lookups
-        def wrapper(key, value):
-            key.isprimary = isprimary
-            for k, v in mapper(key.body, value):
-                jk = copy(key)
-                jk.body = k
-                yield jk, v
-        wrapper.opts = [('joinkeys', 'yes')]
-        if hasattr(mapper, 'opts'):
-            wrapper.opts += mapper.opts
-        return wrapper
-        
-
 def primary(mapper):
-    return joinmapper(isprimary=True)(mapper)
+    return PrimaryMapper(mapper)
 
 def secondary(mapper):
-    return joinmapper(isprimary=False)(mapper)
+    return SecondaryMapper(mapper)

@@ -137,6 +137,44 @@ class MultiMapper(object):
             self.opts += mapper.opts
 
 
+class JoinMapper(object):
+
+    def __init__(self, mapper, isprimary=False):
+        if type(mapper) in (types.ClassType, type):
+            mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+            if hasattr(mappercls, 'map'):
+                self.mapper = mappercls().map
+            else:
+                self.mapper = mappercls()
+        else:
+            self.mapper = mapper
+        if self.mapper.func_code.co_argcount != 2:
+            raise TypeError('wrapped mapper has to take two arguments')
+        self.isprimary = isprimary
+        self.opts = [('joinkeys', 'yes')]
+        if hasattr(self.mapper, 'opts'):
+            self.opts += self.mapper.opts
+
+    def __call__(self, key, value):
+        key.isprimary = self.isprimary
+        for k, v in self.mapper(key.body, value):
+            jk = copy(key)
+            jk.body = k
+            yield jk, v
+
+            
+class PrimaryMapper(JoinMapper):
+
+    def __init__(self, mapper):
+        JoinMapper.__init__(self, mapper, True)
+
+
+class SecondaryMapper(JoinMapper): 
+
+    def __init__(self, mapper):
+        JoinMapper.__init__(self, mapper, False)
+
+
 class JoinReducer(object):
 
     opts = [("joinkeys", "yes")]
