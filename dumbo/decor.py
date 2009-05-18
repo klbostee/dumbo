@@ -36,7 +36,7 @@ class joinmapper(object):
         self.isprimary = isprimary
         
     def __call__(self, mapper):
-        if len(mapper.func_code.co_varnames) != 2:
+        if mapper.func_code.co_argcount != 2:
             raise TypeError('joinmapper has to take two arguments')
         isprimary = self.isprimary  # avoid additional lookups
         def wrapper(key, value):
