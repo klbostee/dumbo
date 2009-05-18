@@ -460,8 +460,10 @@ def run(mapper,
         buffersize=None,
         mapconf=None,
         redconf=None,
+        combconf=None,
         mapclose=None,
         redclose=None,
+        combclose=None,
         opts=None,
         iter=0,
         itercnt=1):
@@ -474,25 +476,25 @@ def run(mapper,
             memlim = int(sys.argv[3])
             resource.setrlimit(resource.RLIMIT_AS, (memlim, memlim))
         if iterarg == iter:
-            if type(mapper) in (types.ClassType, type):
-                mappercls = type('DumboMapper', (mapper, MapRedBase), {})
-                if hasattr(mappercls, 'map'):
-                    mapper = mappercls().map
-                else:
-                    mapper = mappercls()
-            if type(reducer) in (types.ClassType, type):
-                reducercls = type('DumboReducer', (reducer, MapRedBase), {})
-                if hasattr(reducercls, 'reduce'):
-                    reducer = reducercls().reduce
-                else:
-                    reducer = reducercls()
-            if type(combiner) in (types.ClassType, type):
-                combinercls = type('DumboCombiner', (combiner, MapRedBase), {})
-                if hasattr(combinercls, 'reduce'):
-                    combiner = combinercls().reduce
-                else:
-                    combiner = combinercls()
             if sys.argv[1].startswith('map'):
+                if type(mapper) in (types.ClassType, type):
+                    mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+                    mapper = mappercls()
+                    if hasattr(mapper, 'map'):
+                        mapper = mapper.map
+                if hasattr(mapper, 'configure'):
+                    mapconf = mapper.configure
+                if hasattr(mapper, 'close'):
+                    mapclose = mapper.close
+                if type(combiner) in (types.ClassType, type):
+                    combinercls = type('DumboCombiner', (combiner, MapRedBase), {})
+                    combiner = combinercls()
+                    if hasattr(combiner, 'reduce'):
+                        combiner = combiner.reduce
+                if hasattr(combiner, 'configure'):
+                    combconf = combiner.configure
+                if hasattr(combiner, 'close'):
+                    combclose = combiner.close
                 try:
                     print >> sys.stderr, "INFO: consuming %s" % \
                                          os.environ['map_input_file']
@@ -534,6 +536,8 @@ def run(mapper,
                 else:
                     outputs = itermap(inputs, mapper)
                 if combiner:
+                    if combconf:
+                        combconf()
                     if (not buffersize) and memlim:
                         buffersize = int(memlim * 0.33) / 512  # educated guess
                         print >> sys.stderr, 'INFO: buffersize =', buffersize
@@ -543,6 +547,8 @@ def run(mapper,
                                              keyfunc=JoinKey.fromjoinkey)
                     else:
                         outputs = iterreduce(inputs, combiner)
+                    if combclose:
+                        combclose()
                 if os.environ.has_key('dumbo_joinkeys'):
                     outputs = ((jk.dump(), v) for (jk, v) in outputs)
                 if mapclose:
@@ -557,6 +563,15 @@ def run(mapper,
                     for output in dumpcode(outputs):
                         print '\t'.join(output)
             elif reducer:
+                if type(reducer) in (types.ClassType, type):
+                    reducercls = type('DumboReducer', (reducer, MapRedBase), {})
+                    reducer = reducercls()
+                    if hasattr(reducer, 'reduce'):
+                        reducer = reducer.reduce
+                if hasattr(reducer, 'configure'):
+                    redconf = reducer.configure
+                if hasattr(reducer, 'close'):
+                    redclose = reducer.close
                 if os.environ.has_key('stream_reduce_input') and \
                 os.environ['stream_reduce_input'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: inputting typed bytes"

@@ -98,22 +98,31 @@ class MultiMapper(object):
         return object.__new__(cls) 
     
     def __init__(self):
-        self._mappers = []
+        self.mappers = []
         self.opts = [("addpath", "iter")]
 
-    def itermappers(self):
-        for pattern, mapper in self._mappers:
+    def configure(self):
+        mappers, closefuncs = [], []
+        for pattern, mapper in self.mappers:
             if type(mapper) in (types.ClassType, type):
                 mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+                mapper = mappercls()
                 if hasattr(mappercls, 'map'):
-                    yield (pattern, mappercls().map)
-                else:
-                    yield (pattern, mappercls())
-            else:
-                yield (pattern, mapper)
+                    mapper = mapper.map
+            if hasattr(mapper, 'configure'):
+                mapper.configure()
+            if hasattr(mapper, 'close'):
+                closefuncs.append(mapper.close)
+            mappers.append((pattern, mapper))
+        self.mappers = mappers
+        self.closefuncs = closefuncs
+
+    def close(self):
+        for closefunc in self.closefuncs:
+            closefunc()
 
     def __call__normalkey(self, data):
-        mappers = list(self.itermappers())
+        mappers = self.mappers
         for key, value in data:
             path, key = key
             for pattern, mapper in mappers:
@@ -122,7 +131,7 @@ class MultiMapper(object):
                         yield output
 
     def __call__joinkey(self, data):
-        mappers = list(self.itermappers())
+        mappers = self.mappers
         for key, value in data:
             path = key.body[0]
             key.body = key.body[1]
@@ -132,7 +141,7 @@ class MultiMapper(object):
                         yield output
 
     def add(self, pattern, mapper):
-        self._mappers.append((pattern, mapper))
+        self.mappers.append((pattern, mapper))
         if hasattr(mapper, 'opts'):
             self.opts += mapper.opts
 
@@ -140,18 +149,29 @@ class MultiMapper(object):
 class JoinMapper(object):
 
     def __init__(self, mapper, isprimary=False):
-        if type(mapper) in (types.ClassType, type):
-            mappercls = type('DumboMapper', (mapper, MapRedBase), {})
-            if hasattr(mappercls, 'map'):
-                self.mapper = mappercls().map
-            else:
-                self.mapper = mappercls()
-        else:
-            self.mapper = mapper
+        self.mapper = mapper
         self.isprimary = isprimary
         self.opts = [('joinkeys', 'yes')]
-        if hasattr(self.mapper, 'opts'):
+        if hasattr(mapper, 'opts'):
             self.opts += self.mapper.opts
+        self.closefunc = None
+
+    def configure(self):
+        mapper = self.mapper
+        if type(mapper) in (types.ClassType, type):
+            mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+            mapper = mappercls()
+            if hasattr(mapper, 'map'):
+                mapper = mapper.map
+        if hasattr(mapper, 'configure'):
+            mapper.configure()
+        if hasattr(mapper, 'close'):
+            self.closefunc = mapper.close
+        self.mapper = mapper
+
+    def close(self):
+        if self.closefunc:
+            self.closefunc()
 
     def __call__(self, key, value):
         key.isprimary = self.isprimary
