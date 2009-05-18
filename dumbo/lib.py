@@ -148,8 +148,6 @@ class JoinMapper(object):
                 self.mapper = mappercls()
         else:
             self.mapper = mapper
-        if self.mapper.func_code.co_argcount != 2:
-            raise TypeError('wrapped mapper has to take two arguments')
         self.isprimary = isprimary
         self.opts = [('joinkeys', 'yes')]
         if hasattr(self.mapper, 'opts'):
