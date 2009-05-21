@@ -191,3 +191,7 @@ def doctest(prog):
     failures = doctest.testmod(__import__(prog[:-3]))
     print '%s failures in %s tests' % failures
     return int(failures > 0)
+
+
+if __name__ == '__main__':
+    sys.exit(dumbo())

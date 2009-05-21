@@ -274,7 +274,7 @@ class UnixIteration(Iteration):
             (mpv, spv, rpv) = ('', '', '')
         python = addedopts['python'][0]
         encodepipe = pyenv + ' ' + python + \
-                     ' -m dumbo encodepipe -file ' + ' -file '.join(inputs)
+                     ' -m dumbo.cmd encodepipe -file ' + ' -file '.join(inputs)
         if addedopts['inputformat'] and addedopts['inputformat'][0] == 'code':
             encodepipe += ' -alreadycoded yes'
         if addedopts['addpath'] and addedopts['addpath'][0] != 'no':
