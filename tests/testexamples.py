@@ -53,9 +53,9 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(14, int(output['e']))
 
     def testjoin(self):
-        opts = [('input', self.exdir+'hostnames.code'),
-                ('input', self.exdir+'logs.code')]
-        opts += [('inputformat', 'code'), ('output', self.outfile)]
+        opts = [('input', self.exdir+'hostnames.txt'),
+                ('input', self.exdir+'logs.txt'),
+                ('output', self.outfile)]
         retval = cmd.start(self.exdir+'join.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)

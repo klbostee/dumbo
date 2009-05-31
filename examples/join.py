@@ -3,8 +3,11 @@ Joins hostnames with logs and counts number of logs per host.
 """
 
 import dumbo
-from dumbo.lib import identitymapper, JoinReducer
+from dumbo.lib import JoinReducer
 from dumbo.decor import primary, secondary
+
+def mapper1(key, value):
+    yield value.split("\t", 1) 
 
 class Reducer1(JoinReducer):
     def __init__(self):
@@ -24,10 +27,10 @@ def reducer2(key, values):
     yield key, sum(values)
     
 def runner(job):
-    mapper1 = dumbo.MultiMapper()
-    mapper1.add("hostnames", primary(identitymapper))
-    mapper1.add("logs", secondary(identitymapper))
-    job.additer(mapper1, Reducer1)
+    multimapper = dumbo.MultiMapper()
+    multimapper.add("hostnames", primary(mapper1))
+    multimapper.add("logs", secondary(mapper1))
+    job.additer(multimapper, Reducer1)
     job.additer(mapper2, reducer2, combiner=reducer2)
 
 if __name__ == "__main__":

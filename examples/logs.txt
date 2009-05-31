@@ -1,0 +1,16 @@
+192.168.0.11	starting
+192.168.0.12	starting
+192.168.0.13	starting
+192.168.0.14	starting
+192.168.0.15	starting
+192.168.0.11	task failed
+192.168.0.14	task done
+192.168.0.12	task done
+192.168.0.11	task failed
+192.168.0.15	task done
+192.168.0.11	task failed
+192.168.0.15	task done
+192.168.0.12	task done
+192.168.0.13	task done
+192.168.0.11	task failed
+192.168.0.13	task done
