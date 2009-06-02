@@ -413,15 +413,21 @@ class StreamingIteration(Iteration):
             self.opts.append(('cmdenv', 'dumbo_addpath=true'))
         pyenv = envdef('PYTHONPATH',
                        addedopts['libegg'],
-                       'file',
+                       'libeggs',
                        self.opts,
                        shortcuts=dict(configopts('eggs', self.prog)),
                        quote=False,
                        trim=True)
         if pyenv:
             self.opts.append(('cmdenv', pyenv))
-        hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'], 'file', 
+        hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'], 'libjars', 
                         self.opts, shortcuts=dict(configopts('jars', self.prog)))
+        libeggsopt = getopt(self.opts, 'libeggs')
+        if libeggsopt:
+            self.opts.append(('jobconf', 'tmpfiles=' + ','.join(libeggsopt)))
+        libjarsopt = getopt(self.opts, 'libjars')
+        if libjarsopt:
+            self.opts.append(('jobconf', 'tmpjars=' + ','.join(libjarsopt)))
         cmd = hadoop + '/bin/hadoop jar ' + streamingjar
         retval = execute(cmd, self.opts, hadenv)
         if addedopts['delinputs'] and addedopts['delinputs'][0] == 'yes':

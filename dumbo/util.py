@@ -190,6 +190,8 @@ def envdef(varname,
     for file in files:
         if shortcuts.has_key(file.lower()):
             file = shortcuts[file.lower()]
+        if os.path.exists(file):
+            file = 'file://' + os.path.abspath(file)
         optvals.append(file)
     if not trim:
         path = ':'.join(optvals)
