@@ -330,6 +330,7 @@ class StreamingIteration(Iteration):
                                         'priority',
                                         'cachefile',
                                         'cachearchive',
+                                        'file',
                                         'codewritable',
                                         'addpath',
                                         'python',
@@ -386,6 +387,11 @@ class StreamingIteration(Iteration):
         if addedopts['cachearchive']:
             for cachearchive in addedopts['cachearchive']:
                 self.opts.append(('cacheArchive', cachearchive))
+        if addedopts['file']:
+            for file in addedopts['file']:
+                if os.path.exists(file):
+                    file = 'file://' + os.path.abspath(file)
+                self.opts.append(('files', file))
         if not addedopts['inputformat']:
             addedopts['inputformat'] = ['auto']
         inputformat_shortcuts = \
@@ -413,7 +419,7 @@ class StreamingIteration(Iteration):
             self.opts.append(('cmdenv', 'dumbo_addpath=true'))
         pyenv = envdef('PYTHONPATH',
                        addedopts['libegg'],
-                       'libeggs',
+                       'files',
                        self.opts,
                        shortcuts=dict(configopts('eggs', self.prog)),
                        quote=False,
@@ -422,9 +428,9 @@ class StreamingIteration(Iteration):
             self.opts.append(('cmdenv', pyenv))
         hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'], 'libjars', 
                         self.opts, shortcuts=dict(configopts('jars', self.prog)))
-        libeggsopt = getopt(self.opts, 'libeggs')
-        if libeggsopt:
-            self.opts.append(('jobconf', 'tmpfiles=' + ','.join(libeggsopt)))
+        filesopt = getopt(self.opts, 'files')
+        if filesopt:
+            self.opts.append(('jobconf', 'tmpfiles=' + ','.join(filesopt)))
         libjarsopt = getopt(self.opts, 'libjars')
         if libjarsopt:
             self.opts.append(('jobconf', 'tmpjars=' + ','.join(libjarsopt)))
