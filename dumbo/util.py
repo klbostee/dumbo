@@ -186,17 +186,21 @@ def envdef(varname,
            shortcuts={},
            quote=True,
            trim=False):
-    optvals = []
+    (pathvals, optvals) = ([], [])
     for file in files:
         if shortcuts.has_key(file.lower()):
             file = shortcuts[file.lower()]
-        if os.path.exists(file):
-            file = 'file://' + os.path.abspath(file)
-        optvals.append(file)
-    if not trim:
-        path = ':'.join(optvals)
-    else:
-        path = ':'.join(optval.split('/')[-1] for optval in optvals)
+        if file.startswith('path://'):
+            pathvals.append(file[7:])
+        else:
+            if os.path.exists(file):
+                file = 'file://' + os.path.abspath(file)
+            if not trim:
+                pathvals.append(file)
+            else:
+                pathvals.append(file.split('/')[-1])
+            optvals.append(file)
+    path = ':'.join(pathvals)
     if optname and optvals:
         if not commasep:
             for optval in optvals:
