@@ -391,7 +391,7 @@ class StreamingIteration(Iteration):
             for file in addedopts['file']:
                 if os.path.exists(file):
                     file = 'file://' + os.path.abspath(file)
-                self.opts.append(('files', file))
+                self.opts.append(('file', file))
         if not addedopts['inputformat']:
             addedopts['inputformat'] = ['auto']
         inputformat_shortcuts = \
@@ -419,21 +419,35 @@ class StreamingIteration(Iteration):
             self.opts.append(('cmdenv', 'dumbo_addpath=true'))
         pyenv = envdef('PYTHONPATH',
                        addedopts['libegg'],
-                       'files',
+                       'file',
                        self.opts,
                        shortcuts=dict(configopts('eggs', self.prog)),
                        quote=False,
                        trim=True)
         if pyenv:
             self.opts.append(('cmdenv', pyenv))
-        hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'], 'libjars', 
+        hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'], 'libjar', 
                         self.opts, shortcuts=dict(configopts('jars', self.prog)))
-        filesopt = getopt(self.opts, 'files')
-        if filesopt:
-            self.opts.append(('jobconf', 'tmpfiles=' + ','.join(filesopt)))
-        libjarsopt = getopt(self.opts, 'libjars')
-        if libjarsopt:
-            self.opts.append(('jobconf', 'tmpjars=' + ','.join(libjarsopt)))
+        fileopt = getopt(self.opts, 'file')
+        if fileopt:
+            tmpfiles = []
+            for file in fileopt:
+                if file.startswith('file://'):
+                    self.opts.append(('file', file[7:]))
+                else:
+                    tmpfiles.append(file)
+            if tmpfiles:
+                self.opts.append(('jobconf', 'tmpfiles=' + ','.join(tmpfiles)))
+        libjaropt = getopt(self.opts, 'libjar')
+        if libjaropt:
+            tmpjars = []
+            for jar in libjaropt:
+                if jar.startswith('file://'):
+                    self.opts.append(('file', jar[7:]))
+                else:
+                    tmpjars.append(jar)
+            if tmpjars:
+                self.opts.append(('jobconf', 'tmpjars=' + ','.join(tmpjars)))
         cmd = hadoop + '/bin/hadoop jar ' + streamingjar
         retval = execute(cmd, self.opts, hadenv)
         if addedopts['delinputs'] and addedopts['delinputs'][0] == 'yes':
