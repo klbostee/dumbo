@@ -193,7 +193,9 @@ def envdef(varname,
         if file.startswith('path://'):
             pathvals.append(file[7:])
         else:
-            if os.path.exists(file):
+            if not '://' in file:
+                if not os.path.exists(file):
+                    raise ValueError('file "' + file + '" does not exist')
                 file = 'file://' + os.path.abspath(file)
             if not trim:
                 pathvals.append(file.split('://', 1)[1])

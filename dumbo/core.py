@@ -389,7 +389,9 @@ class StreamingIteration(Iteration):
                 self.opts.append(('cacheArchive', cachearchive))
         if addedopts['file']:
             for file in addedopts['file']:
-                if os.path.exists(file):
+                if not '://' in file:
+                    if not os.path.exists(file):
+                        raise ValueError('file "' + file + '" does not exist')
                     file = 'file://' + os.path.abspath(file)
                 self.opts.append(('file', file))
         if not addedopts['inputformat']:
