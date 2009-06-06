@@ -168,7 +168,9 @@ class Iteration(object):
                                         'parser',
                                         'record',
                                         'joinkeys',
-                                        'hadoopconf'])
+                                        'hadoopconf',
+                                        'mapper',
+                                        'reducer'])
         if addedopts['fake'] and addedopts['fake'][0] == 'yes':
             def dummysystem(*args, **kwargs):
                 return 0
@@ -203,10 +205,16 @@ class Iteration(object):
         memlim = ' 262144000'  # 250MB limit by default
         if addedopts['memlimit']:
             memlim = ' ' + addedopts['memlimit'][0]
-        self.opts.append(('mapper', '%s %s map %i%s' % (python,
-                         progincmd, iter, memlim)))
-        self.opts.append(('reducer', '%s %s red %i%s' % (python,
-                         progincmd, iter, memlim)))
+        if addedopts['mapper']:
+            self.opts.append(('mapper', addedopts['mapper'][0]))
+        else:
+            self.opts.append(('mapper', '%s %s map %i%s' % (python,
+                             progincmd, iter, memlim)))
+        if addedopts['reducer']:
+            self.opts.append(('reducer', addedopts['reducer'][0]))
+        else:
+            self.opts.append(('reducer', '%s %s red %i%s' % (python,
+                             progincmd, iter, memlim)))
         for param in addedopts['param']:
             self.opts.append(('cmdenv', param))
         if addedopts['parser'] and iter == 0:
@@ -633,10 +641,16 @@ def run(mapper,
     else:
         if not opts:
             opts = []
-        if hasattr(mapper, 'opts'):
+        if type(mapper) == str:
+            opts.append(('mapper', mapper))
+        elif hasattr(mapper, 'opts'):
             opts += mapper.opts
-        if hasattr(reducer, 'opts'):
+        if type(reducer) == str:
+            opts.append(('reducer', reducer))
+        elif hasattr(reducer, 'opts'):
             opts += reducer.opts
+        if type(combiner) == str:
+            opts.append(('combiner', combiner))
         opts += parseargs(sys.argv[1:])
         newopts = {}
         newopts['iteration'] = str(iter)
