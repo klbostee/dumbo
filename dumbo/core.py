@@ -571,7 +571,7 @@ def run(mapper,
                     outputs = itermap(inputs, mapper, lambda v: set(*v))
                 else:
                     outputs = itermap(inputs, mapper)
-                if combiner:
+                if combiner and type(combiner) != str:
                     if combconf:
                         combconf()
                     if (not buffersize) and memlim:
