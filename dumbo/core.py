@@ -341,6 +341,7 @@ class StreamingIteration(Iteration):
                                         'file',
                                         'codewritable',
                                         'addpath',
+                                        'getpath',
                                         'python',
                                         'streamoutput'])
         hadoop = findhadoop(addedopts['hadoop'][0])
@@ -416,10 +417,16 @@ class StreamingIteration(Iteration):
         self.opts.append(('inputformat', inputformat))
         if not addedopts['outputformat']:
             addedopts['outputformat'] = ['sequencefile']
-        outputformat_shortcuts = \
-            {'code': 'org.apache.hadoop.mapred.SequenceFileOutputFormat',
-             'text': 'org.apache.hadoop.mapred.TextOutputFormat',
-             'sequencefile': 'org.apache.hadoop.mapred.SequenceFileOutputFormat'}
+        if addedopts['getpath'] and addedopts['getpath'] != 'no':
+            outputformat_shortcuts = \
+                {'code': 'fm.last.feathers.output.MultipleSequenceFiles',
+                 'text': 'fm.last.feathers.output.MultipleTextFiles',               
+                 'sequencefile': 'fm.last.feathers.output.MultipleSequenceFiles'}
+        else:
+            outputformat_shortcuts = \
+                {'code': 'org.apache.hadoop.mapred.SequenceFileOutputFormat',
+                 'text': 'org.apache.hadoop.mapred.TextOutputFormat',
+                 'sequencefile': 'org.apache.hadoop.mapred.SequenceFileOutputFormat'}
         outputformat_shortcuts.update(configopts('outputformats', self.prog))
         outputformat = addedopts['outputformat'][0]
         if outputformat_shortcuts.has_key(outputformat.lower()):
@@ -661,6 +668,7 @@ def run(mapper,
             sys.exit(1)
         preoutputsopt = getopt(opts, 'preoutputs')
         addpathopt = getopt(opts, 'addpath', delete=False)
+        getpathopt = getopt(opts, 'getpath', delete=False)
         if iter != 0:
             newopts['input'] = outputopt[0] + "_pre" + str(iter)
             if not (preoutputsopt and preoutputsopt[0] == 'yes'):
@@ -671,6 +679,8 @@ def run(mapper,
         if iter < itercnt - 1:
             newopts['output'] = outputopt[0] + "_pre" + str(iter + 1)
             newopts['outputformat'] = 'code'
+            if getpathopt and getpathopt[0] == 'yes':  # not when == 'iter'
+                newopts['getpath'] = 'no'
         if not reducer:
             newopts['numreducetasks'] = '0'
         (key, delindexes) = (None, [])
