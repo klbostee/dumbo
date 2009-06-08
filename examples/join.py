@@ -10,10 +10,13 @@ def mapper1(key, value):
     yield value.split("\t", 1) 
 
 class Reducer1(JoinReducer):
+    def __init__(self):
+        self.hostname = "unknown"
     def primary(self, key, values):
         self.hostname = values.next()
     def secondary(self, key, values):
         key = self.hostname
+        self.hostname = "unknown"
         for value in values:
             yield key, value
 
