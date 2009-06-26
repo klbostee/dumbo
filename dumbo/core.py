@@ -194,27 +194,29 @@ class Iteration(object):
         if addedopts['name']:
             name = addedopts['name'][0]
         else:
-            name = sys.argv[0].split('/')[-1]
+            name = self.prog.split('/')[-1]
         self.opts.append(('name', '%s (%s/%s)' % (name, iter + 1,
                          itercnt)))
         if not addedopts['hadoop']:
-            progincmd = self.prog
+            pypath = '/'.join(self.prog.split('/')[:-1])
+            if pypath: self.opts.append(('pypath', pypath))
         else:
             self.opts.append(('hadoop', addedopts['hadoop'][0]))
-            progincmd = self.prog.split('/')[-1]
+        progmod = self.prog.split('/')[-1]
+        progmod = progmod[:-3] if progmod.endswith('.py') else progmod
         memlim = ' 262144000'  # 250MB limit by default
         if addedopts['memlimit']:
             memlim = ' ' + addedopts['memlimit'][0]
         if addedopts['mapper']:
             self.opts.append(('mapper', addedopts['mapper'][0]))
         else:
-            self.opts.append(('mapper', '%s %s map %i%s' % (python,
-                             progincmd, iter, memlim)))
+            self.opts.append(('mapper', '%s -m %s map %i%s' % (python,
+                             progmod, iter, memlim)))
         if addedopts['reducer']:
             self.opts.append(('reducer', addedopts['reducer'][0]))
         else:
-            self.opts.append(('reducer', '%s %s red %i%s' % (python,
-                             progincmd, iter, memlim)))
+            self.opts.append(('reducer', '%s -m %s red %i%s' % (python,
+                             progmod, iter, memlim)))
         for param in addedopts['param']:
             self.opts.append(('cmdenv', param))
         if addedopts['parser'] and iter == 0:
@@ -263,7 +265,8 @@ class UnixIteration(Iteration):
                                         'inputformat',
                                         'outputformat',
                                         'numreducetasks',
-                                        'python'])
+                                        'python',
+                                        'pypath'])
         (mapper, reducer) = (addedopts['mapper'][0], addedopts['reducer'][0])
         if not addedopts['input'] or not addedopts['output']:
             print >> sys.stderr, 'ERROR: input or output not specified'
@@ -272,7 +275,8 @@ class UnixIteration(Iteration):
                         addedopts['input']))
         output = addedopts['output'][0]
         pyenv = envdef('PYTHONPATH', addedopts['libegg'],
-                       shortcuts=dict(configopts('eggs', self.prog)))
+                       shortcuts=dict(configopts('eggs', self.prog)),
+                       extrapaths=addedopts['pypath'])
         cmdenv = ' '.join("%s='%s'" % tuple(arg.split('=')) for arg in
                           addedopts['cmdenv'])
         if addedopts['pv'] and addedopts['pv'][0] == 'yes':
@@ -325,7 +329,8 @@ class StreamingIteration(Iteration):
         retval = Iteration.run(self)
         if retval != 0:
             return retval
-        self.opts.append(('file', self.prog))
+        if os.path.exists(self.prog):
+            self.opts.append(('file', self.prog))
         addedopts = getopts(self.opts, ['hadoop',
                                         'name',
                                         'delinputs',
@@ -343,7 +348,8 @@ class StreamingIteration(Iteration):
                                         'addpath',
                                         'getpath',
                                         'python',
-                                        'streamoutput'])
+                                        'streamoutput',
+                                        'pypath'])
         hadoop = findhadoop(addedopts['hadoop'][0])
         streamingjar = findjar(hadoop, 'streaming')
         if not streamingjar:
@@ -440,7 +446,8 @@ class StreamingIteration(Iteration):
                        self.opts,
                        shortcuts=dict(configopts('eggs', self.prog)),
                        quote=False,
-                       trim=True)
+                       trim=True,
+                       extrapaths=addedopts['pypath'])
         if pyenv:
             self.opts.append(('cmdenv', pyenv))
         hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'], 'libjar', 
@@ -690,11 +697,12 @@ def run(mapper,
         for delindex in reversed(delindexes):
             del opts[delindex]
         opts += newopts.iteritems()
+        progopt = getopt(opts, 'prog')
         hadoopopt = getopt(opts, 'hadoop', delete=False)
         if hadoopopt:
-            retval = StreamingIteration(sys.argv[0], opts).run()
+            retval = StreamingIteration(progopt[0], opts).run()
         else:
-            retval = UnixIteration(sys.argv[0], opts).run()
+            retval = UnixIteration(progopt[0], opts).run()
         if retval == 127:
             print >> sys.stderr, 'ERROR: Are you sure that "python" is on your path?'
         if retval != 0:

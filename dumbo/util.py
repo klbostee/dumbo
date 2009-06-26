@@ -107,7 +107,9 @@ def getopt(opts, key, delete=True):
 def configopts(section, prog=None, opts=[]):
     from ConfigParser import SafeConfigParser, NoSectionError
     if prog:
-        defaults = {'prog': prog.split('/')[-1].split('.py', 1)[0]}
+        prog = prog.split('/')[-1]
+        prog = prog[:-3] if prog.endswith('.py') else prog
+        defaults = {'prog': prog}
     else:
         defaults = {}
     try:
@@ -185,7 +187,8 @@ def envdef(varname,
            commasep=False,
            shortcuts={},
            quote=True,
-           trim=False):
+           trim=False,
+           extrapaths=None):
     (pathvals, optvals) = ([], [])
     for file in files:
         if shortcuts.has_key(file.lower()):
@@ -202,6 +205,8 @@ def envdef(varname,
             else:
                 pathvals.append(file.split('/')[-1])
             optvals.append(file)
+    if extrapaths:
+        pathvals.extend(extrapaths)
     path = ':'.join(pathvals)
     if optname and optvals:
         if not commasep:
