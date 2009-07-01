@@ -197,15 +197,19 @@ class JoinReducer(object):
 
     opts = [("joinkeys", "yes")]
 
+    def __init__(self):
+        self._key = None
+
     def __call__(self, key, values):
         if key.isprimary:
+            self._key = key.body
             output = self.primary(key.body, values)
             if output:
                 for k, v in output:
                     jk = copy(key)
                     jk.body = k
                     yield jk, v
-        else:
+        elif self._key == key.body:
             for k, v in self.secondary(key.body, values):
                 jk = copy(key)
                 jk.body = k
