@@ -560,6 +560,8 @@ def run(mapper,
                     inputs = loadcode(line[:-1] for line in sys.stdin)
                 if mapconf:
                     mapconf()
+                if combconf:
+                    combconf()
                 if os.environ.has_key('dumbo_addpath'):
                     path = os.environ['map_input_file']
                     inputs = (((path, k), v) for (k, v) in inputs)
@@ -586,8 +588,6 @@ def run(mapper,
                 else:
                     outputs = itermap(inputs, mapper)
                 if combiner and type(combiner) != str:
-                    if combconf:
-                        combconf()
                     if (not buffersize) and memlim:
                         buffersize = int(memlim * 0.33) / 512  # educated guess
                         print >> sys.stderr, 'INFO: buffersize =', buffersize
@@ -597,12 +597,8 @@ def run(mapper,
                                              keyfunc=JoinKey.fromjoinkey)
                     else:
                         outputs = iterreduce(inputs, combiner)
-                    if combclose:
-                        combclose()
                 if os.environ.has_key('dumbo_joinkeys'):
                     outputs = ((jk.dump(), v) for (jk, v) in outputs)
-                if mapclose:
-                    mapclose()
                 if os.environ.has_key('stream_map_output') and \
                 os.environ['stream_map_output'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: outputting typed bytes"
@@ -612,6 +608,10 @@ def run(mapper,
                 else:
                     for output in dumpcode(outputs):
                         print '\t'.join(output)
+                if combclose:
+                    combclose()
+                if mapclose:
+                    mapclose()
             elif reducer:
                 if type(reducer) in (types.ClassType, type):
                     reducercls = type('DumboReducer', (reducer, MapRedBase), {})
@@ -638,8 +638,6 @@ def run(mapper,
                     outputs = ((jk.body, v) for (jk, v) in outputs)
                 else:
                     outputs = iterreduce(inputs, reducer)
-                if redclose:
-                    redclose()
                 if os.environ.has_key('stream_reduce_output') and \
                 os.environ['stream_reduce_output'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: outputting typed bytes"
@@ -649,6 +647,8 @@ def run(mapper,
                 else:
                     for output in dumpcode(outputs):
                         print '\t'.join(output)
+                if redclose:
+                    redclose()
             else:
                 for output in dumpcode(inputs):
                     print '\t'.join(output)
