@@ -95,7 +95,7 @@ def start(prog,
 def cat(path, opts):
     opts += configopts('common')
     opts += configopts('cat')
-    addedopts = getopts(opts, ['hadoop', 'libjar', 'ascode'])
+    addedopts = getopts(opts, ['hadoop', 'libjar'], delete=False)
     if not addedopts['hadoop']:
         return decodepipe(opts + [('file', path)])
     hadoop = findhadoop(addedopts['hadoop'][0])
@@ -109,7 +109,8 @@ def cat(path, opts):
         import typedbytes
         process = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
                             % (hadenv, hadoop, streamingjar, path))
-        if addedopts['ascode'] and addedopts['ascode'][0] == 'yes':
+        ascodeopt = getopt(opts, 'ascode')
+        if ascodeopt and ascodeopt[0] == 'yes':
             outputs = dumpcode(typedbytes.PairedInput(process))
         else:
             outputs = dumptext(typedbytes.PairedInput(process))
@@ -124,7 +125,7 @@ def cat(path, opts):
 def ls(path, opts):
     opts += configopts('common')
     opts += configopts('ls')
-    addedopts = getopts(opts, ['hadoop'])
+    addedopts = getopts(opts, ['hadoop'], delete=False)
     if not addedopts['hadoop']:
         return execute("ls -l '%s'" % path, printcmd=False)
     hadoop = findhadoop(addedopts['hadoop'][0])
@@ -146,7 +147,7 @@ def exists(path, opts):
 def rm(path, opts):
     opts += configopts('common')
     opts += configopts('rm')
-    addedopts = getopts(opts, ['hadoop'])
+    addedopts = getopts(opts, ['hadoop'], delete=False)
     if not addedopts['hadoop']:
         return execute("rm -rf '%s'" % path, printcmd=False)
     hadoop = findhadoop(addedopts['hadoop'][0])
@@ -157,7 +158,7 @@ def rm(path, opts):
 def put(path1, path2, opts):
     opts += configopts('common')
     opts += configopts('put')
-    addedopts = getopts(opts, ['hadoop'])
+    addedopts = getopts(opts, ['hadoop'], delete=False)
     if not addedopts['hadoop']:
         return execute("cp '%s' '%s'" % (path1, path2), printcmd=False)
     hadoop = findhadoop(addedopts['hadoop'][0])
@@ -168,7 +169,7 @@ def put(path1, path2, opts):
 def get(path1, path2, opts):
     opts += configopts('common')
     opts += configopts('get')
-    addedopts = getopts(opts, ['hadoop'])
+    addedopts = getopts(opts, ['hadoop'], delete=False)
     if not addedopts['hadoop']:
         return execute("cp '%s' '%s'" % (path1, path2), printcmd=False)
     hadoop = findhadoop(addedopts['hadoop'][0])
