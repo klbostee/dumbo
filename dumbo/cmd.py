@@ -131,8 +131,8 @@ def exists(path, opts):
     if not addedopts['hadoop']:
         return execute("test -e '%s'" % path, printcmd=False)
     hadoop = findhadoop(addedopts['hadoop'][0])
-    return 1 - execute("%s/bin/hadoop dfs -test -e '%s'" % (hadoop, path),
-                       printcmd=False)
+    shellcmd = "%s/bin/hadoop dfs -stat '%s' >/dev/null 2>&1"
+    return 1 - int(execute(shellcmd % (hadoop, path), printcmd=False) == 0)
 
 
 def rm(path, opts):
