@@ -14,13 +14,15 @@ class TestExamples(unittest.TestCase):
             self.tstdir = "./"
         self.logfile = open(self.tstdir+"log.txt", "w")
         self.outfile = self.tstdir + "output.code"
+        self.common_opts = [('checkoutput', 'no')]
 
     def tearDown(self):
         self.logfile.close()
         os.remove(self.outfile)
 
     def testwordcount(self):
-        opts = [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
+        opts = self.common_opts
+        opts += [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'wordcount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -28,8 +30,9 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(6, int(output['Brian']))
 
     def testoowordcount(self):
-        opts = [('excludes', self.exdir+'excludes.txt'), 
-                ('input', self.exdir+'brian.txt'), ('output', self.outfile)]
+        opts = self.common_opts
+        opts += [('excludes', self.exdir+'excludes.txt'), 
+                 ('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'oowordcount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEquals(0, retval)
@@ -37,7 +40,8 @@ class TestExamples(unittest.TestCase):
         self.assertEquals(6, int(output['Brian']))
 
     def testaltwordcount(self):
-        opts = [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
+        opts = self.common_opts
+        opts += [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'altwordcount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -45,7 +49,8 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(6, int(output['Brian']))
 
     def testitertwice(self):
-        opts = [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
+        opts = self.common_opts
+        opts += [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'itertwice.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -53,9 +58,10 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(14, int(output['e']))
 
     def testjoin(self):
-        opts = [('input', self.exdir+'hostnames.txt'),
-                ('input', self.exdir+'logs.txt'),
-                ('output', self.outfile)]
+        opts = self.common_opts
+        opts += [('input', self.exdir+'hostnames.txt'),
+                 ('input', self.exdir+'logs.txt'),
+                 ('output', self.outfile)]
         retval = cmd.start(self.exdir+'join.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -63,9 +69,10 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(5, int(output['node1']))
 
     def testmulticount(self):
-        opts = [('input', self.exdir+'brian.txt'),
-                ('input', self.exdir+'eno.txt'),
-                ('output', self.outfile)]
+        opts = self.common_opts
+        opts += [('input', self.exdir+'brian.txt'),
+                 ('input', self.exdir+'eno.txt'),
+                 ('output', self.outfile)]
         retval = cmd.start(self.exdir+'multicount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)

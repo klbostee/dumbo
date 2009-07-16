@@ -70,7 +70,15 @@ def start(prog,
           stderr=sys.stderr):
     opts += configopts('common')
     opts += configopts('start')
-    addedopts = getopts(opts, ['libegg'], delete=False)
+    addedopts = getopts(opts, ['libegg', 'output'], delete=False)
+    if not addedopts['output']:
+        print >> sys.stderr, 'ERROR: No output path specified'
+        return 1
+    output = addedopts['output'][0]
+    checkoutopt = getopt(opts, 'checkoutput') 
+    if not (checkoutopt and checkoutopt[0] == 'no') and exists(output, opts) == 0:
+        print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
+        return 1
     pyenv = envdef('PYTHONPATH', addedopts['libegg'],
                    shortcuts=dict(configopts('eggs', prog)))
     opts.append(('prog', prog))
