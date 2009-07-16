@@ -127,7 +127,7 @@ def ls(path, opts):
 def exists(path, opts):
     opts += configopts('common')
     opts += configopts('exists')
-    addedopts = getopts(opts, ['hadoop'])
+    addedopts = getopts(opts, ['hadoop'], delete=False)
     if not addedopts['hadoop']:
         return execute("test -e '%s'" % path, printcmd=False)
     hadoop = findhadoop(addedopts['hadoop'][0])
