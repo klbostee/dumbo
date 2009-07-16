@@ -26,6 +26,7 @@ def dumbo():
         print '  dumbo start <python program> [<options>]'
         print '  dumbo cat <path> [<options>]'
         print '  dumbo ls <path> [<options>]'
+        print '  dumbo exists <path> [<options>]'
         print '  dumbo rm <path> [<options>]'
         print '  dumbo put <path1> <path2> [<options>]'
         print '  dumbo get <path1> <path2> [<options>]'
@@ -41,6 +42,8 @@ def dumbo():
         retval = cat(sys.argv[2], parseargs(sys.argv[2:]))
     elif sys.argv[1] == 'ls':
         retval = ls(sys.argv[2], parseargs(sys.argv[2:]))
+    elif sys.argv[1] == 'exists':
+        retval = exists(sys.argv[2], parseargs(sys.argv[2:]))
     elif sys.argv[1] == 'rm':
         retval = rm(sys.argv[2], parseargs(sys.argv[2:]))
     elif sys.argv[1] == 'put':
@@ -119,6 +122,17 @@ def ls(path, opts):
     hadoop = findhadoop(addedopts['hadoop'][0])
     return execute("%s/bin/hadoop dfs -ls '%s'" % (hadoop, path),
                    printcmd=False)
+
+
+def exists(path, opts):
+    opts += configopts('common')
+    opts += configopts('exists')
+    addedopts = getopts(opts, ['hadoop'])
+    if not addedopts['hadoop']:
+        return execute("test -e '%s'" % path, printcmd=False)
+    hadoop = findhadoop(addedopts['hadoop'][0])
+    return 1 - execute("%s/bin/hadoop dfs -test -e '%s'" % (hadoop, path),
+                       printcmd=False)
 
 
 def rm(path, opts):
