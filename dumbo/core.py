@@ -78,8 +78,11 @@ class Params(object):
         except KeyError:
             return None
 
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         return self.get(str(key))
+
+    def __contains__(self, key):
+        return self.get(str(key)) != None
    
 
 class Counter(object):
