@@ -158,15 +158,6 @@ class Iteration(object):
         (self.prog, self.opts) = (prog, opts)
 
     def run(self):
-        outputopt = getopt(self.opts, 'output', delete=False)
-        if not outputopt:
-            print >> sys.stderr, 'ERROR: No output path specified'
-            return 1
-        (output, checkoutopt) = (outputopt[0], getopt(self.opts, 'checkoutput'))
-        checkoutput = not (checkoutopt and checkoutopt[0] == 'no')
-        if checkoutput and exists(output, self.opts) == 0:
-            print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
-            return 1
         addedopts = getopts(self.opts, ['fake',
                                         'debug',
                                         'python',
@@ -678,6 +669,15 @@ def run(mapper,
         if type(combiner) == str:
             opts.append(('combiner', combiner))
         opts += parseargs(sys.argv[1:])
+        outputopt = getopt(opts, 'output', delete=False)
+        if not outputopt:
+            print >> sys.stderr, 'ERROR: No output path specified'
+            return 1
+        (output, checkoutopt) = (outputopt[0], getopt(opts, 'checkoutput'))
+        checkoutput = not (checkoutopt and checkoutopt[0] == 'no')
+        if checkoutput and exists(output, opts) == 0:
+            print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
+            return 1
         newopts = {}
         newopts['iteration'] = str(iter)
         newopts['itercount'] = str(itercnt)
