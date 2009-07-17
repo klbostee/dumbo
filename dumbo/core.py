@@ -179,6 +179,15 @@ class Iteration(object):
                 return 0
             global system
             system = dummysystem  # not very clean, but it works...
+        outputopt = getopt(self.opts, 'output', delete=False)
+        if not outputopt:
+            print >> sys.stderr, 'ERROR: No output path specified'
+            return 1
+        (output, checkoutopt) = (outputopt[0], getopt(self.opts, 'checkoutput'))
+        checkoutput = not (checkoutopt and checkoutopt[0] == 'no')
+        if checkoutput and exists(output, self.opts) == 0:
+            print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
+            return 1
         if addedopts['debug'] and addedopts['debug'][0] == 'yes':
             self.opts.append(('cmdenv', 'dumbo_debug=yes'))
         if not addedopts['python']:
