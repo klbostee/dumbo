@@ -672,12 +672,12 @@ def run(mapper,
         outputopt = getopt(opts, 'output', delete=False)
         if not outputopt:
             print >> sys.stderr, 'ERROR: No output path specified'
-            return 1
+            sys.exit(1)
         (output, checkoutopt) = (outputopt[0], getopt(opts, 'checkoutput'))
         checkoutput = not (checkoutopt and checkoutopt[0] == 'no')
         if checkoutput and exists(output, opts) == 0:
             print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
-            return 1
+            sys.exit(1)
         newopts = {}
         newopts['iteration'] = str(iter)
         newopts['itercount'] = str(itercnt)
