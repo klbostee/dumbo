@@ -6,7 +6,11 @@ from dumbo import cmd, util
 class TestExamples(unittest.TestCase):
 
     def setUp(self):
-        if "/" in __file__:
+        if "directory" in os.environ:
+            rootdir = os.environ["directory"]
+            self.exdir = rootdir + "/examples/"
+            self.tstdir = rootdir + "/tests/"
+        elif "/" in __file__:
             self.exdir = __file__.split("tests/")[0] + "examples/"
             self.tstdir = "/".join(__file__.split("/")[:-1]) + "/"
         else:
