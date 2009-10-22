@@ -74,7 +74,8 @@ def start(prog,
     pyenv = envdef('PYTHONPATH', addedopts['libegg'],
                    shortcuts=dict(configopts('eggs', prog)),
                    extrapaths=sys.path)
-    opts.append(('prog', prog))
+    if not getopt(opts, 'prog', delete=False):
+        opts.append(('prog', prog))
     if not os.path.exists(prog):
         prog = '-m ' + prog
     return execute("%s %s" % (sys.executable, prog),

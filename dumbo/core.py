@@ -490,7 +490,11 @@ def main(runner, starter=None):
     opts.append(('starter', 'no'))
     if starter and not (starteropt and starteropt[0] == 'no') \
     and not (len(sys.argv) > 1 and sys.argv[1][0] != '-'):
-        program = Program(sys.argv[0], opts)
+        progopt = getopt(opts, 'prog')
+        if not progopt:
+            program = Program(sys.argv[0], opts)
+        else:
+            program = Program(progopt[0], opts)
         errormsg = starter(program)
         if errormsg:
             print >> sys.stderr, errormsg
