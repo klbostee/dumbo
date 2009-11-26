@@ -19,6 +19,7 @@ import os
 import re
 import types
 import resource
+import copy
 from itertools import groupby
 from operator import itemgetter, concat
 
@@ -65,6 +66,9 @@ class Program(object):
             return self.getopts(key)[0]
         except IndexError:
             return None
+
+    def clone(self):
+        return copy.deepcopy(self)
 
     def start(self):
         return start(self.prog, self.opts)
@@ -484,7 +488,7 @@ class StreamingIteration(Iteration):
         return retval
 
 
-def main(runner, starter=None):
+def main(runner, starter=None, variator=None):
     opts = parseargs(sys.argv[1:])
     starteropt = getopts(opts, ['starter'])['starter']
     opts.append(('starter', 'no'))
@@ -495,13 +499,21 @@ def main(runner, starter=None):
             program = Program(sys.argv[0], opts)
         else:
             program = Program(progopt[0], opts)
-        errormsg = starter(program)
-        if errormsg:
-            print >> sys.stderr, errormsg
-            sys.exit(1)
-        retval = program.start()
-        if retval != 0:
-            sys.exit(retval)
+        if variator:
+            programs = variator(program)
+        else:
+            programs = [program]
+        status = 0
+        for program in programs:
+            errormsg = starter(program)
+            if errormsg:
+                print >> sys.stderr, errormsg
+                status = 1
+            retval = program.start()
+            if retval != 0:
+                status = retval
+        if status != 0:
+            sys.exit(status)
     else:
         job = Job()
         errormsg = runner(job)
