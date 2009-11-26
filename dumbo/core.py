@@ -27,6 +27,10 @@ from dumbo.util import *
 from dumbo.cmd import *
 
 
+class Error(Exception):
+    pass
+
+
 class Job(object):
     
     def __init__(self):
@@ -503,21 +507,31 @@ def main(runner, starter=None, variator=None):
             program = Program(sys.argv[0], opts)
         else:
             program = Program(progopt[0], opts)
-        if variator:
-            programs = variator(program)
-        else:
-            programs = [program]
-        status = 0
-        for program in programs:
-            errormsg = starter(program)
-            if errormsg:
-                print >> sys.stderr, "ERROR: " + errormsg
-                status = 1
-            retval = program.start()
-            if retval != 0:
-                status = retval
-        if status != 0:
-            sys.exit(status)
+        try:
+            if variator:
+                programs = variator(program)
+                # note the the variator can be a generator, which
+                # implies that exceptions might only occur later
+            else:
+                programs = [program]
+            status = 0
+            for program in programs:
+                try:
+                    errormsg = starter(program)
+                except Error, e:
+                    errormsg = str(e)
+                    status = 1
+                if errormsg:
+                    print >> sys.stderr, "ERROR: " + errormsg
+                    status = 1
+                retval = program.start()
+                if retval != 0:
+                    status = retval
+            if status != 0:
+                sys.exit(status)
+        except Error, e:
+            print >> sys.stderr, "ERROR: " + str(e)
+            sys.exit(1)
     else:
         job = Job()
         errormsg = runner(job)

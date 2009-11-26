@@ -20,7 +20,7 @@ The Dumbo Python module.
 Please refer to http://wiki.github.com/klbostee/dumbo for more info.
 """
 
-from dumbo.core import run, main, Job, Program, Counter
+from dumbo.core import run, main, Error, Job, Program, Counter
 from dumbo.lib import *
 from dumbo.decor import *
 
