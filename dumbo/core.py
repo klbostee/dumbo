@@ -45,6 +45,7 @@ class Program(object):
 
     def __init__(self, prog, opts=[]):
         (self.prog, self.opts) = (prog, opts)
+        self.started = False
 
     def addopt(self, key, value):
         self.opts.append((key, value))
@@ -71,6 +72,9 @@ class Program(object):
         return copy.deepcopy(self)
 
     def start(self):
+        if self.started:
+            return 0
+        self.started = True
         return start(self.prog, self.opts)
 
 
