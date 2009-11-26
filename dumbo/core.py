@@ -511,7 +511,7 @@ def main(runner, starter=None, variator=None):
         for program in programs:
             errormsg = starter(program)
             if errormsg:
-                print >> sys.stderr, errormsg
+                print >> sys.stderr, "ERROR: " + errormsg
                 status = 1
             retval = program.start()
             if retval != 0:
