@@ -567,21 +567,21 @@ def run(mapper,
                 if type(mapper) in (types.ClassType, type):
                     mappercls = type('DumboMapper', (mapper, MapRedBase), {})
                     mapper = mappercls()
-                    if hasattr(mapper, 'map'):
-                        mapper = mapper.map
                 if hasattr(mapper, 'configure'):
                     mapconf = mapper.configure
                 if hasattr(mapper, 'close'):
                     mapclose = mapper.close
+                if hasattr(mapper, 'map'):
+                    mapper = mapper.map
                 if type(combiner) in (types.ClassType, type):
                     combinercls = type('DumboCombiner', (combiner, MapRedBase), {})
                     combiner = combinercls()
-                    if hasattr(combiner, 'reduce'):
-                        combiner = combiner.reduce
                 if hasattr(combiner, 'configure'):
                     combconf = combiner.configure
                 if hasattr(combiner, 'close'):
                     combclose = combiner.close
+                if hasattr(combiner, 'reduce'):
+                    combiner = combiner.reduce
                 try:
                     print >> sys.stderr, "INFO: consuming %s" % \
                                          os.environ['map_input_file']
@@ -653,12 +653,12 @@ def run(mapper,
                 if type(reducer) in (types.ClassType, type):
                     reducercls = type('DumboReducer', (reducer, MapRedBase), {})
                     reducer = reducercls()
-                    if hasattr(reducer, 'reduce'):
-                        reducer = reducer.reduce
                 if hasattr(reducer, 'configure'):
                     redconf = reducer.configure
                 if hasattr(reducer, 'close'):
                     redclose = reducer.close
+                if hasattr(reducer, 'reduce'):
+                    reducer = reducer.reduce
                 if os.environ.has_key('stream_reduce_input') and \
                 os.environ['stream_reduce_input'].lower() == 'typedbytes':
                     print >> sys.stderr, "INFO: inputting typed bytes"
