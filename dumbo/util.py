@@ -35,6 +35,9 @@ def sorted(iterable, piecesize=None, key=None, reverse=False):
                 yield value
             if len(values) < piecesize:
                 break
+
+def incrcounter(group, counter, amount):
+    print >> sys.stderr, 'reporter:counter:%s,%s,%s' % (group, counter, amount)
             
             
 def dumpcode(outputs):

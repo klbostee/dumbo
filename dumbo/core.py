@@ -755,10 +755,6 @@ def run(mapper,
             sys.exit(retval)
 
 
-def incrcounter(group, counter, amount):
-    print >> sys.stderr, 'reporter:counter:%s,%s,%s' % (group, counter, amount)
-
-
 def setstatus(message):
     print >> sys.stderr, 'reporter:status:%s' % message
 
