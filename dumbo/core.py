@@ -281,7 +281,9 @@ class UnixIteration(Iteration):
                                         'outputformat',
                                         'numreducetasks',
                                         'python',
-                                        'pypath'])
+                                        'pypath',
+                                        'sorttmpdir',
+										'sortbufsize'])
         (mapper, reducer) = (addedopts['mapper'][0], addedopts['reducer'][0])
         if not addedopts['input'] or not addedopts['output']:
             print >> sys.stderr, 'ERROR: input or output not specified'
@@ -299,6 +301,13 @@ class UnixIteration(Iteration):
             (spv, rpv) = ('| pv -cN sort ', '| pv -cN reduce ')
         else:
             (mpv, spv, rpv) = ('', '', '')
+
+        (sorttmpdir, sortbufsize) = ('', '')
+        if addedopts['sorttmpdir']:
+            sorttmpdir = "-T %s" % addedopts['sorttmpdir'][0]
+        if addedopts['sortbufsize']:
+            sortbufsize = "-S %s" % addedopts['sortbufsize'][0]
+
         python = addedopts['python'][0]
         encodepipe = pyenv + ' ' + python + \
                      ' -m dumbo.cmd encodepipe -file ' + ' -file '.join(inputs)
@@ -314,12 +323,14 @@ class UnixIteration(Iteration):
                                                           mpv,
                                                           output))
         else:
-            retval = execute("%s | %s %s %s %s| LC_ALL=C sort %s| %s %s %s %s> '%s'"
+            retval = execute("%s | %s %s %s %s| LC_ALL=C sort %s %s %s| %s %s %s %s> '%s'"
                              % (encodepipe,
                                 pyenv,
                                 cmdenv,
                                 mapper,
                                 mpv,
+								sorttmpdir,
+								sortbufsize,
                                 spv,
                                 pyenv,
                                 cmdenv,
