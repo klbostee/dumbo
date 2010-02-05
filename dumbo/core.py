@@ -283,7 +283,7 @@ class UnixIteration(Iteration):
                                         'python',
                                         'pypath',
                                         'sorttmpdir',
-										'sortbufsize'])
+                                        'sortbufsize'])
         (mapper, reducer) = (addedopts['mapper'][0], addedopts['reducer'][0])
         if not addedopts['input'] or not addedopts['output']:
             print >> sys.stderr, 'ERROR: input or output not specified'
@@ -329,8 +329,8 @@ class UnixIteration(Iteration):
                                 cmdenv,
                                 mapper,
                                 mpv,
-								sorttmpdir,
-								sortbufsize,
+                                sorttmpdir,
+                                sortbufsize,
                                 spv,
                                 pyenv,
                                 cmdenv,
