@@ -169,18 +169,23 @@ def findhadoop(optval):
 
 
 def findjar(hadoop, name):
-    jardir = hadoop + '/build/contrib/' + name
-    if not os.path.exists(jardir):
-        jardir = hadoop + '/contrib/' + name + '/lib'
-    if not os.path.exists(jardir):
-        jardir = hadoop + '/contrib/' + name
-    if not os.path.exists(jardir):
-        jardir = hadoop + '/contrib'
-    regex = re.compile('hadoop.*' + name + "\.jar")
-    try:
-        return jardir + '/' + filter(regex.match, os.listdir(jardir))[-1]
-    except:
-        return None
+    """Tries to find a JAR file based on given
+    hadoop home directory and component base name (e.g 'streaming')"""
+
+    jardir_candidates = filter(os.path.exists, [
+        os.path.join(hadoop, 'build', 'contrib', name),
+        os.path.join(hadoop, 'contrib', name, 'lib'),
+        os.path.join(hadoop, 'contrib', name),
+        os.path.join(hadoop, 'contrib')
+    ])
+    regex = re.compile(r'hadoop.*%s\.jar' % name)
+
+    for jardir in jardir_candidates:
+        matches = filter(regex.match, os.listdir(jardir))
+        if matches:
+            return os.path.join(jardir, matches[-1])
+
+    return None
 
 
 def envdef(varname,
