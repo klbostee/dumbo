@@ -221,7 +221,20 @@ class Iteration(object):
         progmod = progmod[:-3] if progmod.endswith('.py') else progmod
         memlim = ' 262144000'  # 250MB limit by default
         if addedopts['memlimit']:
-            memlim = ' ' + addedopts['memlimit'][0]
+            # Limit amount of memory. This supports syntax 
+            # of the form '256m', '12g' etc.
+            try:
+                _memlim = int(addedopts['memlimit'][0][:-1])
+                memlim = ' %i' % {
+                    'g': 1099511627776 * _memlim,
+                    'm': 1048576       * _memlim,
+                    'k': 1024          * _memlim,
+                    'b': 1             * _memlim,
+                }[addedopts['memlimit'][0][-1].lower()]
+            except KeyError:
+                # Assume specified in bytes by default
+                memlim = ' ' + addedopts['memlimit'][0]
+
         if addedopts['mapper']:
             self.opts.append(('mapper', addedopts['mapper'][0]))
         else:
