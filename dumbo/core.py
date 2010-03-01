@@ -226,7 +226,7 @@ class Iteration(object):
             try:
                 _memlim = int(addedopts['memlimit'][0][:-1])
                 memlim = ' %i' % {
-                    'g': 1099511627776 * _memlim,
+                    'g': 1073741824    * _memlim,
                     'm': 1048576       * _memlim,
                     'k': 1024          * _memlim,
                     'b': 1             * _memlim,
