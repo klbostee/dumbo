@@ -193,9 +193,35 @@ class SecondaryMapper(JoinMapper):
         JoinMapper.__init__(self, mapper, False)
 
 
-class JoinReducer(object):
+class JoinCombiner(object):
 
     opts = [("joinkeys", "yes")]
+
+    def __call__(self, key, values):
+        if key.isprimary:
+            self._key = key.body
+            output = self.primary(key.body, values)
+            if output:
+                for k, v in output:
+                    jk = copy(key)
+                    jk.body = k
+                    yield jk, v
+        else:  # no key check!
+            for k, v in self.secondary(key.body, values):
+                jk = copy(key)
+                jk.body = k
+                yield jk, v
+
+    def primary(self, key, values):
+        for value in values:
+            yield key, value
+
+    def secondary(self, key, values):
+        for value in values:
+            yield key, value
+
+
+class JoinReducer(JoinCombiner):
 
     def __init__(self):
         self._key = None
@@ -214,12 +240,3 @@ class JoinReducer(object):
                 jk = copy(key)
                 jk.body = k
                 yield jk, v
-
-    def primary(self, key, values):
-        for value in values:
-            yield key, value
-
-    def secondary(self, key, values):
-        for value in values:
-            yield key, value
-
