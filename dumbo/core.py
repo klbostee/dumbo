@@ -784,14 +784,18 @@ def setstatus(message):
 
 
 def valwrapper(data, valfunc):
+    MAX_LOGGED_BADVALUES = 500
+    badvalues = 0
     for (key, value) in data:
         try:
             yield (key, valfunc(value))
         except (ValueError, TypeError):
-            print >> sys.stderr, \
+            if badvalues <= MAX_LOGGED_BADVALUES:
+                print >> sys.stderr, \
                      'WARNING: skipping bad value (%s)' % str(value)
             if os.environ.has_key('dumbo_debug'):
                 raise
+            badvalues += 1
             incrcounter('Dumbo', 'Bad inputs', 1)
 
 
