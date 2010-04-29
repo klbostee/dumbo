@@ -206,7 +206,7 @@ class JoinCombiner(object):
                     jk = copy(key)
                     jk.body = k
                     yield jk, v
-        elif key_check(key.body):
+        elif self.key_check(key.body):
             for k, v in self.secondary(key.body, values):
                 jk = copy(key)
                 jk.body = k
