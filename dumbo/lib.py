@@ -206,11 +206,15 @@ class JoinCombiner(object):
                     jk = copy(key)
                     jk.body = k
                     yield jk, v
-        else:  # no key check!
+        elif key_check(key.body):
             for k, v in self.secondary(key.body, values):
                 jk = copy(key)
                 jk.body = k
                 yield jk, v
+    
+    def key_check(self, body):
+        '''Defines the equality test between join keys.'''
+        return True
 
     def primary(self, key, values):
         for value in values:
@@ -226,17 +230,5 @@ class JoinReducer(JoinCombiner):
     def __init__(self):
         self._key = None
 
-    def __call__(self, key, values):
-        if key.isprimary:
-            self._key = key.body
-            output = self.primary(key.body, values)
-            if output:
-                for k, v in output:
-                    jk = copy(key)
-                    jk.body = k
-                    yield jk, v
-        elif self._key == key.body:
-            for k, v in self.secondary(key.body, values):
-                jk = copy(key)
-                jk.body = k
-                yield jk, v
+    def key_check(self, body):
+        self._key == body
