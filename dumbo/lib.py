@@ -206,13 +206,13 @@ class JoinCombiner(object):
                     jk = copy(key)
                     jk.body = k
                     yield jk, v
-        elif self.key_check(key.body):
+        elif not self.secondary_blocked(key.body):
             for k, v in self.secondary(key.body, values):
                 jk = copy(key)
                 jk.body = k
                 yield jk, v
     
-    def key_check(self, body):
+    def secondary_blocked(self, key_body):
         '''Defines the equality test between join keys.'''
         return True
 
@@ -232,3 +232,4 @@ class JoinReducer(JoinCombiner):
 
     def key_check(self, body):
         return self._key == body
+
