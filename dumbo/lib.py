@@ -231,4 +231,4 @@ class JoinReducer(JoinCombiner):
         self._key = None
 
     def key_check(self, body):
-        self._key == body
+        return self._key == body
