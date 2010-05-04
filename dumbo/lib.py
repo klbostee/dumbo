@@ -213,8 +213,8 @@ class JoinCombiner(object):
                 yield jk, v
     
     def secondary_blocked(self, key_body):
-        '''Defines the equality test between join keys.'''
-        return True
+        '''Determines if the secondary method should be blocked or not.'''
+        return False
 
     def primary(self, key, values):
         for value in values:
@@ -230,6 +230,6 @@ class JoinReducer(JoinCombiner):
     def __init__(self):
         self._key = None
 
-    def key_check(self, body):
-        return self._key == body
+    def secondary_blocked(self, body):
+        return self._key != body
 
