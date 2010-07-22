@@ -178,7 +178,7 @@ def findjar(hadoop, name):
         os.path.join(hadoop, 'contrib', name),
         os.path.join(hadoop, 'contrib')
     ])
-    regex = re.compile(r'hadoop.*%s\.jar' % name)
+    regex = re.compile(r'hadoop.*%s.*\.jar' % name)
 
     for jardir in jardir_candidates:
         matches = filter(regex.match, os.listdir(jardir))
