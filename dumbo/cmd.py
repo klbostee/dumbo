@@ -104,16 +104,20 @@ def cat(path, opts):
                     shortcuts=dict(configopts('jars')))
     try:
         import typedbytes
-        process = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
-                            % (hadenv, hadoop, streamingjar, path))
-        ascodeopt = getopt(opts, 'ascode')
-        if ascodeopt and ascodeopt[0] == 'yes':
-            outputs = dumpcode(typedbytes.PairedInput(process))
-        else:
-            outputs = dumptext(typedbytes.PairedInput(process))
-        for output in outputs:
-            print '\t'.join(output)
-        process.close()
+        ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % (hadenv, hadoop, path))
+        for line in ls:
+            subpath = line.split()[-1][:-1]
+            dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
+                              % (hadenv, hadoop, streamingjar, subpath))
+            ascodeopt = getopt(opts, 'ascode')
+            if ascodeopt and ascodeopt[0] == 'yes':
+                outputs = dumpcode(typedbytes.PairedInput(dumptb))
+            else:
+                outputs = dumptext(typedbytes.PairedInput(dumptb))
+            for output in outputs:
+                print '\t'.join(output)
+            dumptb.close()
+        ls.close()
     except IOError:
         pass  # ignore
     return 0
