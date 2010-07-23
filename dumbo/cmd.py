@@ -109,7 +109,7 @@ def cat(path, opts):
             subpath = line.split()[-1]
             if not subpath.startswith("/"):
                 continue
-            dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
+            dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s 2> /dev/null'
                               % (hadenv, hadoop, streamingjar, subpath))
             ascodeopt = getopt(opts, 'ascode')
             if ascodeopt and ascodeopt[0] == 'yes':
