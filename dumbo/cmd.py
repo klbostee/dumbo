@@ -77,6 +77,9 @@ def start(prog,
     if not getopt(opts, 'prog', delete=False):
         opts.append(('prog', prog))
     if not os.path.exists(prog):
+        if prog.endswith(".py"):
+            print >> sys.stderr, 'ERROR:', prog, 'does not exist'
+            return 1
         prog = '-m ' + prog
     return execute("%s %s" % (sys.executable, prog),
                    opts,
