@@ -380,6 +380,7 @@ class StreamingIteration(Iteration):
                                         'nummaptasks',
                                         'numreducetasks',
                                         'priority',
+                                        'queue',
                                         'cachefile',
                                         'cachearchive',
                                         'file',
@@ -435,6 +436,9 @@ class StreamingIteration(Iteration):
         if addedopts['priority']:
             self.opts.append(('jobconf', 'mapred.job.priority=%s'
                               % addedopts['priority'][0]))
+        if addedopts['queue']:
+            self.opts.append(('jobconf', 'mapred.job.queue.name=%s'
+                              % addedopts['queue'][0]))
         if addedopts['cachefile']:
             for cachefile in addedopts['cachefile']:
                 self.opts.append(('cacheFile', cachefile))
