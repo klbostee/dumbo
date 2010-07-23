@@ -107,6 +107,8 @@ def cat(path, opts):
         ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % (hadenv, hadoop, path))
         for line in ls:
             subpath = line.split()[-1]
+            if not subpath.startswith("/"):
+                continue
             dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s'
                               % (hadenv, hadoop, streamingjar, subpath))
             ascodeopt = getopt(opts, 'ascode')
