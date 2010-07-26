@@ -38,6 +38,10 @@ def sorted(iterable, piecesize=None, key=None, reverse=False):
 
 def incrcounter(group, counter, amount):
     print >> sys.stderr, 'reporter:counter:%s,%s,%s' % (group, counter, amount)
+
+
+def setstatus(message):
+    print >> sys.stderr, 'reporter:status:%s' % message
             
             
 def dumpcode(outputs):
@@ -227,3 +231,12 @@ def envdef(varname,
     else:
         return '%s="%s"' % (varname, ':'.join((path, '$' + varname)))
 
+
+def getclassname(cls):
+    return cls.__module__ + "." + cls.__name__
+
+
+def loadclassname(name):
+    modname, _, clsname = name.rpartition(".")
+    mod = __import__(modname, fromlist=[clsname])
+    return getattr(mod, clsname)

@@ -21,7 +21,7 @@ from itertools import chain, imap, izip
 from math import sqrt
 from copy import copy
 
-from dumbo.core import MapRedBase
+from dumbo.util import loadclassname
 
 
 def identitymapper(key, value):    
@@ -102,10 +102,11 @@ class MultiMapper(object):
         self.opts = [("addpath", "iter")]
 
     def configure(self):
+        mrbase_class = loadclassname(os.environ['dumbo_mrbase_class'])
         mappers, closefuncs = [], []
         for pattern, mapper in self.mappers:
             if type(mapper) in (types.ClassType, type):
-                mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+                mappercls = type('DumboMapper', (mapper, mrbase_class), {})
                 mapper = mappercls()
                 if hasattr(mappercls, 'map'):
                     mapper = mapper.map
@@ -157,9 +158,10 @@ class JoinMapper(object):
         self.closefunc = None
 
     def configure(self):
+        mrbase_class = loadclassname(os.environ['dumbo_mrbase_class'])
         mapper = self.mapper
         if type(mapper) in (types.ClassType, type):
-            mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+            mappercls = type('DumboMapper', (mapper, mrbase_class), {})
             mapper = mappercls()
             if hasattr(mapper, 'map'):
                 mapper = mapper.map

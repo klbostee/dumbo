@@ -14,12 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+import os
+import re
 import types
 import resource
 import copy
 from itertools import groupby
-from operator import itemgetter, concat
+from operator import itemgetter
 
+from dumbo.backends import get_backend
 from dumbo.util import *
 from dumbo.cmd import *
 
@@ -77,448 +81,6 @@ class Program(object):
             return 0
         self.started = True
         return start(self.prog, self.opts)
-
-
-class Params(object):
-
-    def get(self, name): 
-        try:
-            return os.environ[name]
-        except KeyError:
-            return None
-
-    def __getitem__(self, key):
-        return self.get(str(key))
-
-    def __contains__(self, key):
-        return self.get(str(key)) != None
-   
-
-class Counter(object):
-
-    def __init__(self, name, group='Program'):
-        self.group = group
-        self.name = name
-
-    def incr(self, amount):
-        incrcounter(self.group, self.name, amount)
-        return self
-    __iadd__ = incr
-
-
-class Counters(object):
-    
-    def __init__(self):
-        self.counters = {}
-
-    def __getitem__(self, key):
-        try:
-            return self.counters[key]
-        except KeyError:
-            counter = Counter(str(key))
-            self.counters[key] = counter
-            return counter
-
-    def __setitem__(self, key, value):
-        pass
-
-
-class MapRedBase(object):
-    
-    params = Params()
-    counters = Counters()
-    
-    def setstatus(self, msg):
-        setstatus(msg)
-    status = property(fset=setstatus)
-
-
-class JoinKey(object):
-
-    def __init__(self, body, isprimary=False):
-        self.body = body
-        self.isprimary = isprimary
-  
-    def __cmp__(self, other):
-        bodycmp = cmp(self.body, other.body)
-        if bodycmp:
-            return bodycmp
-        else:
-            return cmp(self.isprimary, other.isprimary)
-
-    @classmethod
-    def fromjoinkey(cls, jk):
-        return cls(jk.body, jk.isprimary)
-
-    @classmethod
-    def fromdump(cls, dump):
-        return cls(dump[0], dump[1] == 1)
-
-    def dump(self):
-        return (self.body, 2 - int(self.isprimary))
-
-    def __repr__(self):
-        return repr(self.dump())
-
-
-class Iteration(object):
-
-    def __init__(self, prog, opts):
-        (self.prog, self.opts) = (prog, opts)
-
-    def run(self):
-        addedopts = getopts(self.opts, ['fake',
-                                        'debug',
-                                        'python',
-                                        'iteration',
-                                        'itercount',
-                                        'hadoop',
-                                        'starter',
-                                        'name',
-                                        'memlimit',
-                                        'param',
-                                        'parser',
-                                        'record',
-                                        'joinkeys',
-                                        'hadoopconf',
-                                        'mapper',
-                                        'reducer'])
-        if addedopts['fake'] and addedopts['fake'][0] == 'yes':
-            def dummysystem(*args, **kwargs):
-                return 0
-            global system
-            system = dummysystem  # not very clean, but it works...
-        if addedopts['debug'] and addedopts['debug'][0] == 'yes':
-            self.opts.append(('cmdenv', 'dumbo_debug=yes'))
-        if not addedopts['python']:
-            python = 'python'
-        else:
-            python = addedopts['python'][0]
-        self.opts.append(('python', python))
-        if not addedopts['iteration']:
-            iter = 0
-        else:
-            iter = int(addedopts['iteration'][0])
-        if not addedopts['itercount']:
-            itercnt = 0
-        else:
-            itercnt = int(addedopts['itercount'][0])
-        if addedopts['name']:
-            name = addedopts['name'][0]
-        else:
-            name = self.prog.split('/')[-1]
-        self.opts.append(('name', '%s (%s/%s)' % (name, iter + 1,
-                         itercnt)))
-        if not addedopts['hadoop']:
-            pypath = '/'.join(self.prog.split('/')[:-1])
-            if pypath: self.opts.append(('pypath', pypath))
-        else:
-            self.opts.append(('hadoop', addedopts['hadoop'][0]))
-        progmod = self.prog.split('/')[-1]
-        progmod = progmod[:-3] if progmod.endswith('.py') else progmod
-        memlim = ' 262144000'  # 250MB limit by default
-        if addedopts['memlimit']:
-            # Limit amount of memory. This supports syntax 
-            # of the form '256m', '12g' etc.
-            try:
-                _memlim = int(addedopts['memlimit'][0][:-1])
-                memlim = ' %i' % {
-                    'g': 1073741824    * _memlim,
-                    'm': 1048576       * _memlim,
-                    'k': 1024          * _memlim,
-                    'b': 1             * _memlim,
-                }[addedopts['memlimit'][0][-1].lower()]
-            except KeyError:
-                # Assume specified in bytes by default
-                memlim = ' ' + addedopts['memlimit'][0]
-
-        if addedopts['mapper']:
-            self.opts.append(('mapper', addedopts['mapper'][0]))
-        else:
-            self.opts.append(('mapper', '%s -m %s map %i%s' % (python,
-                             progmod, iter, memlim)))
-        if addedopts['reducer']:
-            self.opts.append(('reducer', addedopts['reducer'][0]))
-        else:
-            self.opts.append(('reducer', '%s -m %s red %i%s' % (python,
-                             progmod, iter, memlim)))
-        for param in addedopts['param']:
-            self.opts.append(('cmdenv', param))
-        if addedopts['parser'] and iter == 0:
-            parser = addedopts['parser'][0]
-            shortcuts = dict(configopts('parsers', self.prog))
-            if parser in shortcuts:
-                parser = shortcuts[parser]
-            self.opts.append(('cmdenv', 'dumbo_parser=' + parser))
-        if addedopts['record'] and iter == 0:
-            record = addedopts['record'][0]
-            shortcuts = dict(configopts('records', self.prog))
-            if record in shortcuts:
-                record = shortcuts[record]
-            self.opts.append(('cmdenv', 'dumbo_record=' + record))
-        if addedopts['joinkeys'] and addedopts['joinkeys'][0] == 'yes':
-            self.opts.append(('cmdenv', 'dumbo_joinkeys=yes'))
-            self.opts.append(('partitioner',
-                              'org.apache.hadoop.mapred.lib.BinaryPartitioner'))
-            self.opts.append(('jobconf',
-                              'mapred.binary.partitioner.right.offset=-6'))
-        for hadoopconf in addedopts['hadoopconf']:
-            self.opts.append(('jobconf', hadoopconf))
-        self.opts.append(('libegg', re.sub('\.egg.*$', '.egg', __file__)))
-        return 0
-
-
-class UnixIteration(Iteration):
-
-    def __init__(self, prog, opts):
-        Iteration.__init__(self, prog, opts)
-        self.opts += configopts('unix', prog, self.opts)
-
-    def run(self):
-        retval = Iteration.run(self)
-        if retval != 0:
-            return retval
-        addedopts = getopts(self.opts, ['input',
-                                        'output',
-                                        'mapper',
-                                        'reducer',
-                                        'libegg',
-                                        'delinputs',
-                                        'cmdenv',
-                                        'pv',
-                                        'addpath',
-                                        'inputformat',
-                                        'outputformat',
-                                        'numreducetasks',
-                                        'python',
-                                        'pypath',
-                                        'sorttmpdir',
-                                        'sortbufsize'])
-        (mapper, reducer) = (addedopts['mapper'][0], addedopts['reducer'][0])
-        if not addedopts['input'] or not addedopts['output']:
-            print >> sys.stderr, 'ERROR: input or output not specified'
-            return 1
-        inputs = reduce(concat, (input.split(' ') for input in
-                        addedopts['input']))
-        output = addedopts['output'][0]
-        pyenv = envdef('PYTHONPATH', addedopts['libegg'],
-                       shortcuts=dict(configopts('eggs', self.prog)),
-                       extrapaths=addedopts['pypath'])
-        cmdenv = ' '.join("%s='%s'" % tuple(arg.split('=')) for arg in
-                          addedopts['cmdenv'])
-        if addedopts['pv'] and addedopts['pv'][0] == 'yes':
-            mpv = '| pv -s `du -b %s | cut -f 1` -cN map ' % ' '.join(inputs)
-            (spv, rpv) = ('| pv -cN sort ', '| pv -cN reduce ')
-        else:
-            (mpv, spv, rpv) = ('', '', '')
-
-        (sorttmpdir, sortbufsize) = ('', '')
-        if addedopts['sorttmpdir']:
-            sorttmpdir = "-T %s" % addedopts['sorttmpdir'][0]
-        if addedopts['sortbufsize']:
-            sortbufsize = "-S %s" % addedopts['sortbufsize'][0]
-
-        python = addedopts['python'][0]
-        encodepipe = pyenv + ' ' + python + \
-                     ' -m dumbo.cmd encodepipe -file ' + ' -file '.join(inputs)
-        if addedopts['inputformat'] and addedopts['inputformat'][0] == 'code':
-            encodepipe += ' -alreadycoded yes'
-        if addedopts['addpath'] and addedopts['addpath'][0] != 'no':
-            encodepipe += ' -addpath yes'
-        if addedopts['numreducetasks'] and addedopts['numreducetasks'][0] == '0':
-            retval = execute("%s | %s %s %s %s > '%s'" % (encodepipe,
-                                                          pyenv,
-                                                          cmdenv,
-                                                          mapper,
-                                                          mpv,
-                                                          output))
-        else:
-            retval = execute("%s | %s %s %s %s| LC_ALL=C sort %s %s %s| %s %s %s %s> '%s'"
-                             % (encodepipe,
-                                pyenv,
-                                cmdenv,
-                                mapper,
-                                mpv,
-                                sorttmpdir,
-                                sortbufsize,
-                                spv,
-                                pyenv,
-                                cmdenv,
-                                reducer,
-                                rpv,
-                                output))
-        if addedopts['delinputs'] and addedopts['delinputs'][0] == 'yes':
-            for file in addedopts['input']:
-                execute('rm ' + file)
-        return retval
-
-
-class StreamingIteration(Iteration):
-
-    def __init__(self, prog, opts):
-        Iteration.__init__(self, prog, opts)
-        self.opts += configopts('streaming', prog, self.opts)
-        hadoop = getopt(self.opts, 'hadoop', delete=False)[0]
-        self.opts += configopts('streaming_' + hadoop, prog, self.opts)
-
-    def run(self):
-        retval = Iteration.run(self)
-        if retval != 0:
-            return retval
-        if os.path.exists(self.prog):
-            self.opts.append(('file', self.prog))
-        addedopts = getopts(self.opts, ['hadoop',
-                                        'name',
-                                        'delinputs',
-                                        'libegg',
-                                        'libjar',
-                                        'inputformat',
-                                        'outputformat',
-                                        'nummaptasks',
-                                        'numreducetasks',
-                                        'priority',
-                                        'queue',
-                                        'cachefile',
-                                        'cachearchive',
-                                        'file',
-                                        'codewritable',
-                                        'addpath',
-                                        'getpath',
-                                        'python',
-                                        'streamoutput',
-                                        'pypath'])
-        hadoop = findhadoop(addedopts['hadoop'][0])
-        streamingjar = findjar(hadoop, 'streaming')
-        if not streamingjar:
-            print >> sys.stderr, 'ERROR: Streaming jar not found'
-            return 1
-        try: 
-            import typedbytes
-        except ImportError:
-            print >> sys.stderr, 'ERROR: "typedbytes" module not found'
-            return 1
-        modpath = re.sub('\.egg.*$', '.egg', typedbytes.__file__)
-        if modpath.endswith('.egg'):            
-            addedopts['libegg'].append(modpath)    
-        else:
-            self.opts.append(('file', modpath)) 
-        self.opts.append(('jobconf', 'stream.map.input=typedbytes'))
-        self.opts.append(('jobconf', 'stream.reduce.input=typedbytes'))
-        if addedopts['numreducetasks'] and addedopts['numreducetasks'][0] == '0':
-            self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
-            if addedopts['streamoutput']:
-                id_ = addedopts['streamoutput'][0]
-                self.opts.append(('jobconf', 'stream.map.output=' + id_))
-            else: 
-                self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
-        else:
-            self.opts.append(('jobconf', 'stream.map.output=typedbytes'))
-            if addedopts['streamoutput']:
-                id_ = addedopts['streamoutput'][0]
-                self.opts.append(('jobconf', 'stream.reduce.output=' + id_))
-            else:
-                self.opts.append(('jobconf', 'stream.reduce.output=typedbytes'))
-        if not addedopts['name']:
-            self.opts.append(('jobconf', 'mapred.job.name='
-                              + self.prog.split('/')[-1]))
-        else:
-            self.opts.append(('jobconf', 'mapred.job.name=%s'
-                              % addedopts['name'][0]))
-        if addedopts['nummaptasks']:
-            self.opts.append(('jobconf', 'mapred.map.tasks=%s'
-                              % addedopts['nummaptasks'][0]))
-        if addedopts['numreducetasks']:
-            numreducetasks = int(addedopts['numreducetasks'][0])
-            self.opts.append(('numReduceTasks', str(numreducetasks)))
-        if addedopts['priority']:
-            self.opts.append(('jobconf', 'mapred.job.priority=%s'
-                              % addedopts['priority'][0]))
-        if addedopts['queue']:
-            self.opts.append(('jobconf', 'mapred.job.queue.name=%s'
-                              % addedopts['queue'][0]))
-        if addedopts['cachefile']:
-            for cachefile in addedopts['cachefile']:
-                self.opts.append(('cacheFile', cachefile))
-        if addedopts['cachearchive']:
-            for cachearchive in addedopts['cachearchive']:
-                self.opts.append(('cacheArchive', cachearchive))
-        if addedopts['file']:
-            for file in addedopts['file']:
-                if not '://' in file:
-                    if not os.path.exists(file):
-                        raise ValueError('file "' + file + '" does not exist')
-                    file = 'file://' + os.path.abspath(file)
-                self.opts.append(('file', file))
-        if not addedopts['inputformat']:
-            addedopts['inputformat'] = ['auto']
-        inputformat_shortcuts = \
-            {'code': 'org.apache.hadoop.streaming.AutoInputFormat',
-             'text': 'org.apache.hadoop.mapred.TextInputFormat',
-             'sequencefile': 'org.apache.hadoop.streaming.AutoInputFormat',
-             'auto': 'org.apache.hadoop.streaming.AutoInputFormat'}
-        inputformat_shortcuts.update(configopts('inputformats', self.prog))
-        inputformat = addedopts['inputformat'][0]
-        if inputformat_shortcuts.has_key(inputformat.lower()):
-            inputformat = inputformat_shortcuts[inputformat.lower()]
-        self.opts.append(('inputformat', inputformat))
-        if not addedopts['outputformat']:
-            addedopts['outputformat'] = ['sequencefile']
-        if addedopts['getpath'] and addedopts['getpath'] != 'no':
-            outputformat_shortcuts = \
-                {'code': 'fm.last.feathers.output.MultipleSequenceFiles',
-                 'text': 'fm.last.feathers.output.MultipleTextFiles',               
-                 'sequencefile': 'fm.last.feathers.output.MultipleSequenceFiles'}
-        else:
-            outputformat_shortcuts = \
-                {'code': 'org.apache.hadoop.mapred.SequenceFileOutputFormat',
-                 'text': 'org.apache.hadoop.mapred.TextOutputFormat',
-                 'sequencefile': 'org.apache.hadoop.mapred.SequenceFileOutputFormat'}
-        outputformat_shortcuts.update(configopts('outputformats', self.prog))
-        outputformat = addedopts['outputformat'][0]
-        if outputformat_shortcuts.has_key(outputformat.lower()):
-            outputformat = outputformat_shortcuts[outputformat.lower()]
-        self.opts.append(('outputformat', outputformat))
-        if addedopts['addpath'] and addedopts['addpath'][0] != 'no':
-            self.opts.append(('cmdenv', 'dumbo_addpath=true'))
-        pyenv = envdef('PYTHONPATH',
-                       addedopts['libegg'],
-                       'file',
-                       self.opts,
-                       shortcuts=dict(configopts('eggs', self.prog)),
-                       quote=False,
-                       trim=True,
-                       extrapaths=addedopts['pypath'])
-        if pyenv:
-            self.opts.append(('cmdenv', pyenv))
-        hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'], 'libjar', 
-                        self.opts, shortcuts=dict(configopts('jars', self.prog)))
-        fileopt = getopt(self.opts, 'file')
-        if fileopt:
-            tmpfiles = []
-            for file in fileopt:
-                if file.startswith('file://'):
-                    self.opts.append(('file', file[7:]))
-                else:
-                    tmpfiles.append(file)
-            if tmpfiles:
-                self.opts.append(('jobconf', 'tmpfiles=' + ','.join(tmpfiles)))
-        libjaropt = getopt(self.opts, 'libjar')
-        if libjaropt:
-            tmpjars = []
-            for jar in libjaropt:
-                if jar.startswith('file://'):
-                    self.opts.append(('file', jar[7:]))
-                else:
-                    tmpjars.append(jar)
-            if tmpjars:
-                self.opts.append(('jobconf', 'tmpjars=' + ','.join(tmpjars)))
-        cmd = hadoop + '/bin/hadoop jar ' + streamingjar
-        retval = execute(cmd, self.opts, hadenv)
-        if addedopts['delinputs'] and addedopts['delinputs'][0] == 'yes':
-            for (key, value) in self.opts:
-                if key == 'input':
-                    execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop, value))
-        return retval
 
 
 def main(runner, starter=None, variator=None):
@@ -587,10 +149,14 @@ def run(mapper,
         if len(sys.argv) > 3:
             memlim = int(sys.argv[3])
             resource.setrlimit(resource.RLIMIT_AS, (memlim, memlim))
+            
+        mrbase_class = loadclassname(os.environ['dumbo_mrbase_class'])
+        jk_class = loadclassname(os.environ['dumbo_jk_class'])
+        
         if iterarg == iter:
             if sys.argv[1].startswith('map'):
                 if type(mapper) in (types.ClassType, type):
-                    mappercls = type('DumboMapper', (mapper, MapRedBase), {})
+                    mappercls = type('DumboMapper', (mapper, mrbase_class), {})
                     mapper = mappercls()
                 if hasattr(mapper, 'configure'):
                     mapconf = mapper.configure
@@ -599,7 +165,7 @@ def run(mapper,
                 if hasattr(mapper, 'map'):
                     mapper = mapper.map
                 if type(combiner) in (types.ClassType, type):
-                    combinercls = type('DumboCombiner', (combiner, MapRedBase), {})
+                    combinercls = type('DumboCombiner', (combiner, mrbase_class), {})
                     combiner = combinercls()
                 if hasattr(combiner, 'configure'):
                     combconf = combiner.configure
@@ -628,7 +194,7 @@ def run(mapper,
                     path = os.environ['map_input_file']
                     inputs = (((path, k), v) for (k, v) in inputs)
                 if os.environ.has_key('dumbo_joinkeys'):
-                    inputs = ((JoinKey(k), v) for (k, v) in inputs)
+                    inputs = ((jk_class(k), v) for (k, v) in inputs)
                 if os.environ.has_key('dumbo_parser'):
                     parser = os.environ['dumbo_parser']
                     clsname = parser.split('.')[-1]          
@@ -656,7 +222,7 @@ def run(mapper,
                     inputs = sorted(outputs, buffersize)
                     if os.environ.has_key('dumbo_joinkeys'):
                         outputs = iterreduce(inputs, combiner,
-                                             keyfunc=JoinKey.fromjoinkey)
+                                             keyfunc=jk_class.fromjoinkey)
                     else:
                         outputs = iterreduce(inputs, combiner)
                 if os.environ.has_key('dumbo_joinkeys'):
@@ -676,7 +242,7 @@ def run(mapper,
                     mapclose()
             elif reducer:
                 if type(reducer) in (types.ClassType, type):
-                    reducercls = type('DumboReducer', (reducer, MapRedBase), {})
+                    reducercls = type('DumboReducer', (reducer, mrbase_class), {})
                     reducer = reducercls()
                 if hasattr(reducer, 'configure'):
                     redconf = reducer.configure
@@ -696,7 +262,7 @@ def run(mapper,
                     redconf()
                 if os.environ.has_key('dumbo_joinkeys'):
                     outputs = iterreduce(inputs, reducer,
-                                         keyfunc=JoinKey.fromdump)
+                                         keyfunc=jk_class.fromdump)
                     outputs = ((jk.body, v) for (jk, v) in outputs)
                 else:
                     outputs = iterreduce(inputs, reducer)
@@ -768,20 +334,17 @@ def run(mapper,
         for delindex in reversed(delindexes):
             del opts[delindex]
         opts += newopts.iteritems()
-        progopt = getopt(opts, 'prog')
-        hadoopopt = getopt(opts, 'hadoop', delete=False)
-        if hadoopopt:
-            retval = StreamingIteration(progopt[0], opts).run()
-        else:
-            retval = UnixIteration(progopt[0], opts).run()
+
+        backend = get_backend(opts)
+        opts.append(('cmdenv', 'dumbo_mrbase_class=' + \
+                     getclassname(backend.get_mapredbase_class(opts))))
+        opts.append(('cmdenv', 'dumbo_jk_class=' + \
+                     getclassname(backend.get_joinkey_class(opts))))
+        retval = backend.create_iteration(opts).run()
         if retval == 127:
             print >> sys.stderr, 'ERROR: Are you sure that "python" is on your path?'
         if retval != 0:
             sys.exit(retval)
-
-
-def setstatus(message):
-    print >> sys.stderr, 'reporter:status:%s' % message
 
 
 def valwrapper(data, valfunc):

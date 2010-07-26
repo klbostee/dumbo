@@ -14,7 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+import os
+
 from dumbo.util import *
+from dumbo.backends import create_filesystem
 
 
 def dumbo():
@@ -87,92 +91,37 @@ def start(prog,
 def cat(path, opts):
     opts += configopts('common')
     opts += configopts('cat')
-    addedopts = getopts(opts, ['hadoop', 'libjar'], delete=False)
-    if not addedopts['hadoop']:
-        return decodepipe(opts + [('file', path)])
-    hadoop = findhadoop(addedopts['hadoop'][0])
-    streamingjar = findjar(hadoop, 'streaming')
-    if not streamingjar:
-        print >> sys.stderr, 'ERROR: Streaming jar not found'
-        return 1
-    hadenv = envdef('HADOOP_CLASSPATH', addedopts['libjar'],
-                    shortcuts=dict(configopts('jars')))
-    try:
-        import typedbytes
-        ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % (hadenv, hadoop, path))
-        for line in ls:
-            subpath = line.split()[-1]
-            if not subpath.startswith("/"):
-                continue
-            dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s 2> /dev/null'
-                              % (hadenv, hadoop, streamingjar, subpath))
-            ascodeopt = getopt(opts, 'ascode')
-            if ascodeopt and ascodeopt[0] == 'yes':
-                outputs = dumpcode(typedbytes.PairedInput(dumptb))
-            else:
-                outputs = dumptext(typedbytes.PairedInput(dumptb))
-            for output in outputs:
-                print '\t'.join(output)
-            dumptb.close()
-        ls.close()
-    except IOError:
-        pass  # ignore
-    return 0
+    return create_filesystem(opts).cat(path, opts)
 
 
 def ls(path, opts):
     opts += configopts('common')
     opts += configopts('ls')
-    addedopts = getopts(opts, ['hadoop'], delete=False)
-    if not addedopts['hadoop']:
-        return execute("ls -l '%s'" % path, printcmd=False)
-    hadoop = findhadoop(addedopts['hadoop'][0])
-    return execute("%s/bin/hadoop dfs -ls '%s'" % (hadoop, path),
-                   printcmd=False)
+    return create_filesystem(opts).ls(path, opts)
 
 
 def exists(path, opts):
     opts += configopts('common')
     opts += configopts('exists')
-    addedopts = getopts(opts, ['hadoop'], delete=False)
-    if not addedopts['hadoop']:
-        return execute("test -e '%s'" % path, printcmd=False)
-    hadoop = findhadoop(addedopts['hadoop'][0])
-    shellcmd = "%s/bin/hadoop dfs -stat '%s' >/dev/null 2>&1"
-    return 1 - int(execute(shellcmd % (hadoop, path), printcmd=False) == 0)
+    return create_filesystem(opts).exists(path, opts)
 
 
 def rm(path, opts):
     opts += configopts('common')
     opts += configopts('rm')
-    addedopts = getopts(opts, ['hadoop'], delete=False)
-    if not addedopts['hadoop']:
-        return execute("rm -rf '%s'" % path, printcmd=False)
-    hadoop = findhadoop(addedopts['hadoop'][0])
-    return execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop, path),
-                   printcmd=False)
+    return create_filesystem(opts).rm(path, opts)
 
 
 def put(path1, path2, opts):
     opts += configopts('common')
     opts += configopts('put')
-    addedopts = getopts(opts, ['hadoop'], delete=False)
-    if not addedopts['hadoop']:
-        return execute("cp '%s' '%s'" % (path1, path2), printcmd=False)
-    hadoop = findhadoop(addedopts['hadoop'][0])
-    return execute("%s/bin/hadoop dfs -put '%s' '%s'" % (hadoop, path1,
-                   path2), printcmd=False)
+    return create_filesystem(opts).put(path1, path2, opts)
 
 
 def get(path1, path2, opts):
     opts += configopts('common')
     opts += configopts('get')
-    addedopts = getopts(opts, ['hadoop'], delete=False)
-    if not addedopts['hadoop']:
-        return execute("cp '%s' '%s'" % (path1, path2), printcmd=False)
-    hadoop = findhadoop(addedopts['hadoop'][0])
-    return execute("%s/bin/hadoop dfs -get '%s' '%s'" % (hadoop, path1,
-                   path2), printcmd=False)
+    return create_filesystem(opts).get(path1, path2, opts)
 
 
 def encodepipe(opts=[]):
