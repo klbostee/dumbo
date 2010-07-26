@@ -224,7 +224,8 @@ class StreamingFileSystem(FileSystem):
                 # cat each file separately when the path contains special chars
                 ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % \
                               (hadenv, self.hadoop, path))
-                subpaths = (line.split()[-1] for line in ls)
+                subpaths = [line.split()[-1] for line in ls]
+                ls.close()
             else:
                 subpaths = [path]
             for subpath in subpaths:
@@ -240,7 +241,6 @@ class StreamingFileSystem(FileSystem):
                 for output in outputs:
                     print '\t'.join(output)
                 dumptb.close()
-            ls.close()
         except IOError:
             pass  # ignore
         return 0
