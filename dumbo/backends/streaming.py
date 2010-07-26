@@ -220,15 +220,15 @@ class StreamingFileSystem(FileSystem):
                         shortcuts=dict(configopts('jars')))
         try:
             import typedbytes
+            ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % (hadenv, self.hadoop, path))
             if sum(c in path for c in ("*", "?", "{")) > 0:
                 # cat each file separately when the path contains special chars
-                ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % \
-                              (hadenv, self.hadoop, path))
                 lineparts = (line.split()[-1] for line in ls)
                 subpaths = [part for part in lineparts if part.startswith("/")]
-                ls.close()
             else:
+                # we still do the ls even in this case to make sure we print errors 
                 subpaths = [path]
+            ls.close()
             for subpath in subpaths:
                 dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s 2> /dev/null'
                                   % (hadenv, self.hadoop, streamingjar, subpath))
