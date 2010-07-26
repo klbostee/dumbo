@@ -224,13 +224,12 @@ class StreamingFileSystem(FileSystem):
                 # cat each file separately when the path contains special chars
                 ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % \
                               (hadenv, self.hadoop, path))
-                subpaths = [line.split()[-1] for line in ls]
+                lineparts = (line.split()[-1] for line in ls)
+                subpaths = [part for part in lineparts if part.startswith("/")]
                 ls.close()
             else:
                 subpaths = [path]
             for subpath in subpaths:
-                if not subpath.startswith("/"):
-                    continue
                 dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s 2> /dev/null'
                                   % (hadenv, self.hadoop, streamingjar, subpath))
                 ascodeopt = getopt(opts, 'ascode')
