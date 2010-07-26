@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-import re
 import types
 import resource
 import copy
@@ -145,9 +142,9 @@ class JoinKey(object):
     def __cmp__(self, other):
         bodycmp = cmp(self.body, other.body)
         if bodycmp:
-           return bodycmp
+            return bodycmp
         else:
-           return cmp(self.isprimary, other.isprimary)
+            return cmp(self.isprimary, other.isprimary)
 
     @classmethod
     def fromjoinkey(cls, jk):

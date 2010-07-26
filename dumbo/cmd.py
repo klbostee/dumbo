@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import os
-
 from dumbo.util import *
 
 
@@ -36,8 +33,6 @@ def dumbo():
         return 1
     if sys.argv[1] == 'start':
         retval = start(sys.argv[2], parseargs(sys.argv[2:]))
-    elif sys.argv[1] == 'submit':
-        retval = submit(sys.argv[2], parseargs(sys.argv[2:]))
     elif sys.argv[1] == 'cat':
         retval = cat(sys.argv[2], parseargs(sys.argv[2:]))
     elif sys.argv[1] == 'ls':
