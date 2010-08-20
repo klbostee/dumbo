@@ -294,7 +294,13 @@ def run(mapper,
         if type(combiner) == str:
             opts.append(('combiner', combiner))
         opts += parseargs(sys.argv[1:])
+        
+        backend = get_backend(opts)
+        
         outputopt = getopt(opts, 'output', delete=False)
+        overwriteopt = getopt(opts, 'overwrite')
+        if overwriteopt and overwriteopt[0] == 'yes':
+            backend.create_filesystem(opts).rm(outputopt[0], opts)
         if not outputopt:
             print >> sys.stderr, 'ERROR: No output path specified'
             sys.exit(1)
@@ -303,6 +309,7 @@ def run(mapper,
         if checkoutput and exists(output, opts) == 0:
             print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
             sys.exit(1)
+        
         newopts = {}
         newopts['iteration'] = str(iter)
         newopts['itercount'] = str(itercnt)
@@ -334,12 +341,11 @@ def run(mapper,
         for delindex in reversed(delindexes):
             del opts[delindex]
         opts += newopts.iteritems()
-
-        backend = get_backend(opts)
+            
         opts.append(('cmdenv', 'dumbo_mrbase_class=' + \
                      getclassname(backend.get_mapredbase_class(opts))))
         opts.append(('cmdenv', 'dumbo_jk_class=' + \
-                     getclassname(backend.get_joinkey_class(opts))))
+                     getclassname(backend.get_joinkey_class(opts))))        
         retval = backend.create_iteration(opts).run()
         if retval == 127:
             print >> sys.stderr, 'ERROR: Are you sure that "python" is on your path?'
