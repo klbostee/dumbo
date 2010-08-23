@@ -295,40 +295,28 @@ def run(mapper,
             opts.append(('combiner', combiner))
         opts += parseargs(sys.argv[1:])
         
-        backend = get_backend(opts)
-        
         outputopt = getopt(opts, 'output', delete=False)
-        overwriteopt = getopt(opts, 'overwrite')
-        if overwriteopt and overwriteopt[0] == 'yes':
-            backend.create_filesystem(opts).rm(outputopt[0], opts)
         if not outputopt:
             print >> sys.stderr, 'ERROR: No output path specified'
             sys.exit(1)
-        (output, checkoutopt) = (outputopt[0], getopt(opts, 'checkoutput'))
-        checkoutput = not (checkoutopt and checkoutopt[0] == 'no')
-        if checkoutput and exists(output, opts) == 0:
-            print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
-            sys.exit(1)
+        output = outputopt[0]
         
         newopts = {}
         newopts['iteration'] = str(iter)
         newopts['itercount'] = str(itercnt)
-        outputopt = getopt(opts, 'output', delete=False)
-        if not outputopt:
-            print >> sys.stderr, 'ERROR: no output path given'
-            sys.exit(1)
         preoutputsopt = getopt(opts, 'preoutputs')
         addpathopt = getopt(opts, 'addpath', delete=False)
         getpathopt = getopt(opts, 'getpath', delete=False)
         if iter != 0:
-            newopts['input'] = outputopt[0] + "_pre" + str(iter)
+            newopts['input'] = output + "_pre" + str(iter)
             if not (preoutputsopt and preoutputsopt[0] == 'yes'):
                 newopts['delinputs'] = 'yes'
             newopts['inputformat'] = 'code'
             if addpathopt and addpathopt[0] == 'yes':  # not when == 'iter'
                 newopts['addpath'] = 'no'
         if iter < itercnt - 1:
-            newopts['output'] = outputopt[0] + "_pre" + str(iter + 1)
+            output += "_pre" + str(iter + 1)
+            newopts['output'] = output
             newopts['outputformat'] = 'code'
             if getpathopt and getpathopt[0] == 'yes':  # not when == 'iter'
                 newopts['getpath'] = 'no'
@@ -341,11 +329,23 @@ def run(mapper,
         for delindex in reversed(delindexes):
             del opts[delindex]
         opts += newopts.iteritems()
-            
+        
+        backend = get_backend(opts)
+
+        overwriteopt = getopt(opts, 'overwrite')
+        checkoutopt = getopt(opts, 'checkoutput')
+        checkoutput = not (checkoutopt and checkoutopt[0] == 'no')
+        fs = backend.create_filesystem(opts)
+        if overwriteopt and overwriteopt[0] == 'yes':
+            fs.rm(output, opts)
+        elif checkoutput and fs.exists(output, opts) == 0:
+            print >> sys.stderr, 'ERROR: Output path exists already: %s' % output
+            sys.exit(1)
+        
         opts.append(('cmdenv', 'dumbo_mrbase_class=' + \
                      getclassname(backend.get_mapredbase_class(opts))))
         opts.append(('cmdenv', 'dumbo_jk_class=' + \
-                     getclassname(backend.get_joinkey_class(opts))))        
+                     getclassname(backend.get_joinkey_class(opts))))                  
         retval = backend.create_iteration(opts).run()
         if retval == 127:
             print >> sys.stderr, 'ERROR: Are you sure that "python" is on your path?'
