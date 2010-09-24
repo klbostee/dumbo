@@ -78,7 +78,6 @@ class BaseDriver(object):
         """Run test"""
         for output in imap(self._func, self._input_source):
             exp_out = self._output_source.next()
-            print >> sys.stdout, output, exp_out
             assert output == exp_out, \
                    "Output {0} did not match expected output: {1}".format(\
                        output, exp_out)
