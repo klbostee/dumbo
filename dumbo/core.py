@@ -36,8 +36,8 @@ class Job(object):
     
     def __init__(self):
         self.iters = []
-        self.deps = {}
-        self.start = -1
+        self.deps = {}  # will contain last dependency for each node
+        self.root = -1  # id for the job's root input
     
     def additer(self, *args, **kwargs):
         kwargs.setdefault('input', len(self.iters)-1)
@@ -68,9 +68,9 @@ class Job(object):
                 addpathopt = getopt(opts, 'addpath', delete=False)
                 getpathopt = getopt(opts, 'getpath', delete=False)
 
-                job_input = getopt(opts, 'input', delete=False)
-                if not job_input:
-                    print >> sys.stderr, 'ERROR: No output path specified'
+                job_inputs = getopt(opts, 'input', delete=False)
+                if not job_inputs:
+                    print >> sys.stderr, 'ERROR: No input path specified'
                     sys.exit(1)
 
                 outputopt = getopt(opts, 'output', delete=False)
@@ -87,7 +87,7 @@ class Job(object):
                 if type(input) == int:
                     input = [input]
                 if input == [-1]:
-                    kwargs['input'] = job_input
+                    kwargs['input'] = job_inputs
                     if delinputsopt and delinputsopt[0] == 'yes' and iter == self.deps[-1]:
                         newopts['delinputs'] = 'yes'
                     else:
@@ -127,6 +127,7 @@ class Job(object):
                     for initer in input:
                         if iter == self.deps[initer]:
                             fs.rm(job_output + "_pre" + str(initer + 1), opts)
+
 
 class Program(object):
 
@@ -379,7 +380,7 @@ def run(mapper,
         opts += parseargs(sys.argv[1:])
 
         if input is not None:
-            inputopt = getopt(opts, 'input', delete=True)
+            getopt(opts, 'input', delete=True)  # delete -input opts
             for infile in input:
                 opts.append(('input', infile))
         
