@@ -230,6 +230,8 @@ class StreamingFileSystem(FileSystem):
                 subpaths = [path]
             ls.close()
             for subpath in subpaths:
+                if subpath.endswith("/_logs"):
+                    continue
                 dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s 2> /dev/null'
                                   % (hadenv, self.hadoop, streamingjar, subpath))
                 ascodeopt = getopt(opts, 'ascode')
