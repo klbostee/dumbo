@@ -177,9 +177,13 @@ def findjar(hadoop, name):
     hadoop home directory and component base name (e.g 'streaming')"""
 
     jardir_candidates = filter(os.path.exists, [
+        os.path.join(hadoop, 'mapred', 'build', 'contrib', name),
         os.path.join(hadoop, 'build', 'contrib', name),
+        os.path.join(hadoop, 'mapred', 'contrib', name, 'lib'),
         os.path.join(hadoop, 'contrib', name, 'lib'),
+        os.path.join(hadoop, 'mapred', 'contrib', name),
         os.path.join(hadoop, 'contrib', name),
+        os.path.join(hadoop, 'mapred', 'contrib'),
         os.path.join(hadoop, 'contrib')
     ])
     regex = re.compile(r'hadoop.*%s.*\.jar' % name)

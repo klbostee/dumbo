@@ -18,7 +18,7 @@ import os
 import sys
 import re
 
-from dumbo.backends.common import Backend, Iteration, FileSystem
+from dumbo.backends.common import Backend, Iteration, FileSystem, RunInfo
 from dumbo.util import getopt, getopts, configopts, envdef, execute
 from dumbo.util import findhadoop, findjar, dumpcode, dumptext
 
@@ -35,6 +35,9 @@ class StreamingBackend(Backend):
     def create_filesystem(self, opts):
         hadoopopt = getopt(opts, 'hadoop', delete=False)
         return StreamingFileSystem(findhadoop(hadoopopt[0]))
+
+    def get_runinfo_class(self, opts):
+        return StreamingRunInfo
 
 
 class StreamingIteration(Iteration):
@@ -201,7 +204,11 @@ class StreamingIteration(Iteration):
         if addedopts['delinputs'] and addedopts['delinputs'][0] == 'yes':
             for (key, value) in self.opts:
                 if key == 'input':
-                    execute("%s/bin/hadoop dfs -rmr '%s'" % (hadoop, value))
+                    if os.path.exists(hadoop + "/bin/hdfs"):
+                        hdfs = hadoop + "/bin/hdfs"
+                    else:
+                        hdfs = hadoop + "/bin/hadoop"
+                    execute("%s dfs -rmr '%s'" % (hdfs, value))
         return retval
 
 
@@ -209,6 +216,10 @@ class StreamingFileSystem(FileSystem):
     
     def __init__(self, hadoop):
         self.hadoop = hadoop
+        if os.path.exists(hadoop + "/bin/hdfs"):
+            self.hdfs = hadoop + "/bin/hdfs"
+        else:
+            self.hdfs = hadoop + "/bin/hadoop"
     
     def cat(self, path, opts):
         addedopts = getopts(opts, ['libjar'], delete=False)
@@ -220,7 +231,7 @@ class StreamingFileSystem(FileSystem):
                         shortcuts=dict(configopts('jars')))
         try:
             import typedbytes
-            ls = os.popen('%s %s/bin/hadoop dfs -ls %s' % (hadenv, self.hadoop, path))
+            ls = os.popen('%s %s dfs -ls %s' % (hadenv, self.hdfs, path))
             if sum(c in path for c in ("*", "?", "{")) > 0:
                 # cat each file separately when the path contains special chars
                 lineparts = (line.split()[-1] for line in ls)
@@ -247,21 +258,29 @@ class StreamingFileSystem(FileSystem):
         return 0
     
     def ls(self, path, opts):
-        return execute("%s/bin/hadoop dfs -ls '%s'" % (self.hadoop, path),
+        return execute("%s dfs -ls '%s'" % (self.hdfs, path),
                        printcmd=False)
     
     def exists(self, path, opts):
-        shellcmd = "%s/bin/hadoop dfs -stat '%s' >/dev/null 2>&1"
-        return 1 - int(execute(shellcmd % (self.hadoop, path), printcmd=False) == 0)
+        shellcmd = "%s dfs -stat '%s' >/dev/null 2>&1"
+        return 1 - int(execute(shellcmd % (self.hdfs, path), printcmd=False) == 0)
     
     def rm(self, path, opts):
-        return execute("%s/bin/hadoop dfs -rmr '%s'" % (self.hadoop, path),
+        return execute("%s dfs -rmr '%s'" % (self.hdfs, path),
                        printcmd=False)
     
     def put(self, path1, path2, opts):
-        return execute("%s/bin/hadoop dfs -put '%s' '%s'" % (self.hadoop, path1,
+        return execute("%s dfs -put '%s' '%s'" % (self.hdfs, path1,
                        path2), printcmd=False)
     
     def get(self, path1, path2, opts):
-        return execute("%s/bin/hadoop dfs -get '%s' '%s'" % (self.hadoop, path1,
+        return execute("%s dfs -get '%s' '%s'" % (self.hdfs, path1,
                        path2), printcmd=False)
+
+
+class StreamingRunInfo(RunInfo):
+
+    def get_input_path(self):
+        if os.environ.has_key('mapreduce_map_input_file'):
+            return os.environ['mapreduce_map_input_file']
+        return os.environ['map_input_file']

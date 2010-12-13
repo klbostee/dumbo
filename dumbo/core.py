@@ -236,6 +236,7 @@ def run(mapper,
             
         mrbase_class = loadclassname(os.environ['dumbo_mrbase_class'])
         jk_class = loadclassname(os.environ['dumbo_jk_class'])
+        runinfo = loadclassname(os.environ['dumbo_runinfo_class'])()
         
         if iterarg == iter:
             if sys.argv[1].startswith('map'):
@@ -275,7 +276,7 @@ def run(mapper,
                 if combconf:
                     combconf()
                 if os.environ.has_key('dumbo_addpath'):
-                    path = os.environ['map_input_file']
+                    path = runinfo.get_input_path()
                     inputs = (((path, k), v) for (k, v) in inputs)
                 if os.environ.has_key('dumbo_joinkeys'):
                     inputs = ((jk_class(k), v) for (k, v) in inputs)
@@ -420,7 +421,9 @@ def run(mapper,
         opts.append(('cmdenv', 'dumbo_mrbase_class=' + \
                      getclassname(backend.get_mapredbase_class(opts))))
         opts.append(('cmdenv', 'dumbo_jk_class=' + \
-                     getclassname(backend.get_joinkey_class(opts))))                  
+                     getclassname(backend.get_joinkey_class(opts))))
+        opts.append(('cmdenv', 'dumbo_runinfo_class=' + \
+                     getclassname(backend.get_runinfo_class(opts))))
         retval = backend.create_iteration(opts).run()
         if retval == 127:
             print >> sys.stderr, 'ERROR: Are you sure that "python" is on your path?'

@@ -103,6 +103,12 @@ class JoinKey(object):
         return repr(self.dump())
 
 
+class RunInfo(object):
+
+    def get_input_path(self):
+        return 'unknown'
+
+
 class Iteration(object):
 
     def __init__(self, prog, opts):
@@ -254,3 +260,7 @@ class Backend(object):
     def get_joinkey_class(self, opts):
         """ Returns a suitable JoinKey class """
         return JoinKey
+
+    def get_runinfo_class(self, opts):
+        """ Returns a suitable RunInfo class """
+        return RunInfo
