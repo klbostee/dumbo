@@ -148,7 +148,7 @@ class Iteration(object):
         else:
             iter = int(addedopts['iteration'][0])
         if not addedopts['itercount']:
-            itercnt = 0
+            itercnt = 1
         else:
             itercnt = int(addedopts['itercount'][0])
         if addedopts['name']:
