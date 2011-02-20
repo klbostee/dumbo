@@ -154,11 +154,13 @@ class StreamingIteration(Iteration):
             outputformat_shortcuts = \
                 {'code': 'fm.last.feathers.output.MultipleSequenceFiles',
                  'text': 'fm.last.feathers.output.MultipleTextFiles',               
+                 'raw': 'fm.last.feathers.output.MultipleRawFileOutputFormat',
                  'sequencefile': 'fm.last.feathers.output.MultipleSequenceFiles'}
         else:
             outputformat_shortcuts = \
                 {'code': 'org.apache.hadoop.mapred.SequenceFileOutputFormat',
                  'text': 'org.apache.hadoop.mapred.TextOutputFormat',
+                 'raw': 'fm.last.feathers.output.RawFileOutputFormat',
                  'sequencefile': 'org.apache.hadoop.mapred.SequenceFileOutputFormat'}
         outputformat_shortcuts.update(configopts('outputformats', self.prog))
         outputformat = addedopts['outputformat'][0]
