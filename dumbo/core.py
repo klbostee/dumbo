@@ -194,9 +194,10 @@ def main(runner, starter=None, variator=None):
                 if errormsg:
                     print >> sys.stderr, "ERROR: " + errormsg
                     status = 1
-                retval = program.start()
-                if retval != 0:
-                    status = retval
+                else:
+                    retval = program.start()
+                    if retval != 0:
+                        status = retval
             if status != 0:
                 sys.exit(status)
         except Error, e:
@@ -206,7 +207,7 @@ def main(runner, starter=None, variator=None):
         job = Job()
         errormsg = runner(job)
         if errormsg:
-            print >> sys.sdterr, errormsg
+            print >> sys.stderr, errormsg
             sys.exit(1)
         job.run()
 
