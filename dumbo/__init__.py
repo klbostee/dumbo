@@ -25,7 +25,12 @@ from dumbo.backends.common import Counter  # for backwards compatibility
 from dumbo.lib import *
 from dumbo.decor import *
 
-if __name__ == '__main__':
+
+def execute_and_exit():
     import sys
     from dumbo.cmd import dumbo
     sys.exit(dumbo())
+
+
+if __name__ == '__main__':
+    execute_and_exit()

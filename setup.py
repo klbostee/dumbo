@@ -9,7 +9,7 @@ setup(
     packages = find_packages(),
     entry_points = {
         'console_scripts': [
-            'dumbo = dumbo.cmd:dumbo',
+            'dumbo = dumbo:execute_and_exit',
         ]
     },
     zip_safe = True,
