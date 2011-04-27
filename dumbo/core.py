@@ -62,6 +62,10 @@ class Job(object):
             else:
                 opts = kwargs.get('opts', [])
                 opts += parseargs(sys.argv[1:])
+                
+                # this has to be done early, while all the opts are still there
+                backend = get_backend(opts)
+                fs = backend.create_filesystem(opts)
 
                 preoutputsopt = getopt(opts, 'preoutputs')
                 delinputsopt = getopt(opts, 'delinputs')
@@ -121,8 +125,6 @@ class Job(object):
 
                 run(*args, **kwargs)
 
-                backend = get_backend(opts)
-                fs = backend.create_filesystem(opts)
                 if not (preoutputsopt and preoutputsopt[0] == 'yes') and input != [-1]:
                     for initer in input:
                         if iter == self.deps[initer]:
