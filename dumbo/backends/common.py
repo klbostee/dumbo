@@ -22,19 +22,31 @@ from dumbo.util import incrcounter, setstatus, getopts, configopts
 
 
 class Params(object):
-
-    def get(self, name): 
+    """
+    >>> os.environ["hi"] = "world"
+    >>> p = Params()
+    >>> "hi" in p
+    True
+    >>> p["hi"] == "world"
+    True
+    >>> p.get("hi") == "world"
+    True
+    >>> p.get("hello", "dumbo") == "dumbo"
+    True
+    >>>
+    """
+    def get(self, name, default=None): 
         try:
             return os.environ[name]
         except KeyError:
-            return None
+            return default
 
     def __getitem__(self, key):
         return self.get(str(key))
 
     def __contains__(self, key):
-        return self.get(str(key)) != None
-   
+        return self.get(str(key)) is not None
+
 
 class Counter(object):
 
