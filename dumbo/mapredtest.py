@@ -26,6 +26,7 @@ http://www.cloudera.com/blog/2009/07/debugging-mapreduce-programs-with-mrunit/
 """
 
 import sys
+import os
 import inspect
 from itertools import imap
 
@@ -55,6 +56,11 @@ class BaseDriver(object):
             	
         self._input_source = None
         self._output_source = None
+    
+    def with_params(self, params):
+        for k, v in params:
+            os.environ[k] = v
+        return self
         
     def with_input(self, input_source):
         """Bind input stream"""
