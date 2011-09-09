@@ -156,10 +156,10 @@ def execute(cmd,
 
 def system(cmd, stdout=sys.stdout, stderr=sys.stderr):
     if sys.version[:3] == '2.4':
-        return os.system(cmd) / 256
+        return os.system(cmd)
     proc = subprocess.Popen(cmd, shell=True, stdout=stdout,
                             stderr=stderr)
-    return os.waitpid(proc.pid, 0)[1] / 256
+    return os.waitpid(proc.pid, 0)[1]
 
 
 def findhadoop(optval):
