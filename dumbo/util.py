@@ -159,7 +159,7 @@ def system(cmd, stdout=sys.stdout, stderr=sys.stderr):
         return os.system(cmd)
     proc = subprocess.Popen(cmd, shell=True, stdout=stdout,
                             stderr=stderr)
-    return os.waitpid(proc.pid, 0)[1]
+    return proc.wait()
 
 
 def findhadoop(optval):
