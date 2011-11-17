@@ -12,7 +12,8 @@
   		margin-top: 1.0em;
   		background-color: #ababab;
 		  font-family: "helvetica"; 
-  		color: #ffffff;
+  		color: #333333;
+		padding-bottom: 80px;
     }
     #container {
       margin: 0 auto;
@@ -23,8 +24,10 @@
 		h1 a { text-decoration: none }
 		h2 { font-size: 1.5em; color: #333333; }
     h3 { text-align: center; color: #777777; }
+    pre, .description { color: #ffffff; }
     a { color: #000000; }
     .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
+    dt { font-size: 1.1em; margin-left: 20px; margin-top: 10px; margin-bottom: 10px;}
     .download { float: right; }
 		pre { background: #000; color: #fff; padding: 15px;}
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
@@ -51,12 +54,13 @@
     Dumbo is a project that allows you to easily write and run <a href="http://hadoop.apache.org/core" style="color:#fff;">Hadoop</a> 
     programs in Python (it’s named after Disney’s flying circus elephant, 
     since the logo of Hadoop is an elephant and Python was named after the BBC series “Monty Python’s Flying Circus”). More generally, 
-    Dumbo can be considered to be a convenient Python API for writing MapReduce programs.
+    Dumbo can be considered a convenient Python API for writing MapReduce programs.
     </div>
 
-<p><pre>
+<p><pre style="margin-bottom: 40px;">
 def mapper(key, value):
-    for word in value.split(): yield word, 1
+    for word in value.split():
+        yield word, 1
 
 def reducer(key, values):
     yield key, sum(values)
@@ -66,7 +70,39 @@ if __name__ == "__main__":
     dumbo.run(mapper, reducer, combiner=reducer)
 </pre></p>
 
-    <br/>
+    <h2>Defining features</h2>
+    <dl>
+    <dt><b>Easy</b></dt>
+    <dd>Dumbo strives to be as Pythonic as possible &ndash; MapReduce programs that use it are easy
+    on the eyes for people who read them and easy on the fingers for those who write them. Dumbo also
+    provides more than enough boilerplate functionality and additional features to give (directly)
+    using Hadoop Streaming a run for its money. You'll never again even think of writing
+    <a href="http://dumbotics.com/2009/02/24/recommending-jira-issues">a job
+    consisting of multiple MapReduce iterations</a> using traditional Streaming once you've done it
+    with Dumbo for instance.
+    </dd>
+    <dt><b>Efficient</b></dt>
+    <dd>Dumbo programs communicate with Hadoop in a very effecient way by relying on
+    <a href="http://dumbotics.com/2009/02/24/hadoop-1722-and-typed-bytes">typed bytes</a>, a nifty
+    serialisation mechanism that was specifically added to Hadoop with Dumbo in mind. Moreover, Dumbo
+    <a href="http://dumbotics.com/2009/06/16/integration-with-java-code/">makes it very easy</a> to
+    write resource-intensive parts of your jobs natively in Java to squeeze out the last few drops of
+    performance.</dd>
+    <dt><b>Flexible</b></dt>
+    <dd>Although it tries very hard to be as simple as possible to use, Dumbo never stands in your way.
+    Nothing prevents you from doing the lower level things required to, e.g., read or write custom
+    input formats (being it binary or text-based), use a specific partitioning scheme, or implement a
+    tricky secondary sort. There effectively is nothing you can do with native Hadoop progams in
+    Java that cannot be done in Dumbo progams, since you can always add in some Java code when needed
+    thanks to Dumbo's heavily streamlined
+    <a href="http://dumbotics.com/2009/06/16/integration-with-java-code/">Java integration</a>.</dd>
+    <dt><b>Mature</b></dt>
+    <dd>Dumbo was the first Python API to be built on top of Hadoop and has been used in production
+    by several different people at various companies for years now. It's a proven technology that won't
+    be going away anytime soon and has been made to run in many different environments,
+    including <a href="http://dumbotics.com/2009/12/23/dumbo-on-amazon-emr/">Amazon Elastic
+    MapReduce</a>.</dd>
+    </dl>
 
     <h2>Documentation</h2>
 
