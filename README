@@ -3,10 +3,12 @@ DESCRIPTION
 
 Dumbo is a Python module that makes writing and running Hadoop
 Streaming programs very easy. More generally, Dumbo can be considered
-to be a convenient Python API for writing MapReduce programs.
+a convenient Python API for writing MapReduce programs.
 
 
 MORE INFO
 """""""""
+
+http://klbostee.github.com/dumbo
 
 http://github.com/klbostee/dumbo/wikis
