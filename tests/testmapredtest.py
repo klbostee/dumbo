@@ -17,6 +17,15 @@ class mapper(object):
 
 def reducer(key,values):
     yield key,sum(values)
+    
+class reducer_with_params(object):
+    
+    def __call__(self, key, value):
+        self.counters['test_counter'] += 1
+        yield 'foo', str(self.params['foo'])
+        yield 'one', str(self.params['one'])
+        self.counters['test_counter'] += 1
+    
 
 class MRTestCase(unittest.TestCase):
     def testmapper(self):
@@ -24,9 +33,25 @@ class MRTestCase(unittest.TestCase):
             (0, "test me"),
             (1, "hello")
         ]
-        output = [('test', 1), ('me', 1), ('hello', 1)]
+        output = [('test', 1),
+                  ('me', 1),
+                  ('hello', 1)]
         MapDriver(mapper).with_input(input).with_output(output).run()
 
+    def testreducer_with_params(self):
+        input = [
+            (0, "test me"),
+            (1, "hello")
+        ]
+        #each 3 map calls will yield with both params 
+        output = [('foo', 'bar'),
+                  ('one', '1'),('foo', 'bar'),
+                  ('one', '1'),('foo', 'bar'),
+                  ('one', '1')]
+        params = [('foo', 'bar'),
+                  ('one', '1')]
+        ReduceDriver(reducer_with_params).with_params(params).with_input(input).with_output(output).run()
+       
     def testreducer(self):
         input = [('test', 1), ('test', 1), ('me', 1,), ('hello', 1)]
         output = [('test', 2), ('me', 1), ('hello', 1)]
