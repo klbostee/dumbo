@@ -162,7 +162,7 @@ class Program(object):
 
 
 def main(runner, starter=None, variator=None):
-    opts = Options(parseargs(sys.argv[1:]))
+    opts = parseargs(sys.argv[1:])
     starteropt = opts.pop('starter')
     opts.add('starter', 'no')
     if starter and 'no' not in starteropt and \

@@ -98,7 +98,7 @@ class Options(object):
             self.add(k, v)
 
     def add(self, key, value):
-        self._opts[key.lower()].add(value)
+        self._opts[key].add(value)
 
     def get(self, key):
         if key not in self._opts:
@@ -151,11 +151,13 @@ class Options(object):
     __repr__ = __str__
 
     def remove(self, *keys):
+        opts = self._opts
         for k in keys:
-            del self._opts[k]
+            if k in opts:
+                del opts[k]
 
     def pop(self, key, default=None):
-        return list(self._opts.pop(key, default))
+        return list(self._opts.pop(key, default or ()))
 
 def parseargs(args):
     (opts, key, values) = (Options(), None, [])

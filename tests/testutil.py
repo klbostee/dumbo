@@ -133,6 +133,8 @@ class TestUtil(unittest.TestCase):
         self.assertEquals(len(nop), 0)
         self.assertEquals(nop['egg'], [])
 
+        self.assertEquals(nop.pop('notexist'), [])
+
 
 
 
