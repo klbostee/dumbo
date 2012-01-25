@@ -120,7 +120,7 @@ class StreamingIteration(Iteration):
             if not '://' in _file:
                 if not os.path.exists(_file):
                     raise ValueError('file "%s" does not exist' % _file)
-                _file = 'file://%s' % os.path.abspath(file)
+                _file = 'file://%s' % os.path.abspath(_file)
             opts.add('file', _file)
 
         if not addedopts['inputformat']:
@@ -176,7 +176,7 @@ class StreamingIteration(Iteration):
             self.opts, shortcuts=dict(configopts('jars', self.prog)))
 
         tmpfiles = []
-        for _file in opts['file']:
+        for _file in opts.pop('file'):
             if _file.startswith('file://'):
                 opts.add('file', _file[7:])
             else:
@@ -185,7 +185,7 @@ class StreamingIteration(Iteration):
             opts.add('jobconf', 'tmpfiles=%s' % ','.join(tmpfiles))
 
         tmpjars = []
-        for jar in opts['libjar']:
+        for jar in opts.pop('libjar'):
             if jar.startswith('file://'):
                 opts.add('file', jar[7:])
             else:
