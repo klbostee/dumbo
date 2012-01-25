@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from dumbo.lib import PrimaryMapper, SecondaryMapper
-
+from dumbo.util import Options
 
 class opt(object):
 
@@ -24,9 +24,10 @@ class opt(object):
 
     def __call__(self, func):
         if hasattr(func, 'opts'):
-            func.opts.append(self.opt)
+            key, value = self.opt
+            func.opts.add(key, value)
         else:
-            func.opts = [self.opt]
+            func.opts = Options([self.opt])
         return func
 
 

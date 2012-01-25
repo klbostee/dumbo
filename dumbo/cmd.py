@@ -17,7 +17,8 @@
 import sys
 import os
 
-from dumbo.util import *
+from dumbo.util import (dumpcode, Options, loadcode, dumptext, loadtext,
+    configopts, parseargs, execute, envdef)
 from dumbo.backends import create_filesystem
 
 
@@ -67,14 +68,15 @@ def start(prog,
           opts,
           stdout=sys.stdout,
           stderr=sys.stderr):
-    opts += configopts('common')
-    opts += configopts('start')
-    addedopts = getopts(opts, ['libegg'], delete=False)
-    pyenv = envdef('PYTHONPATH', addedopts['libegg'],
+    opts += Options(configopts('common'))
+    opts += Options(configopts('start'))
+
+    pyenv = envdef('PYTHONPATH', opts['libegg'],
                    shortcuts=dict(configopts('eggs', prog)),
                    extrapaths=sys.path)
-    if not getopt(opts, 'prog', delete=False):
-        opts.append(('prog', prog))
+    if not opts['prog']:
+        opts.add('prog', prog)
+
     if not os.path.exists(prog):
         if prog.endswith(".py"):
             print >> sys.stderr, 'ERROR:', prog, 'does not exist'
@@ -89,72 +91,74 @@ def start(prog,
 
 
 def cat(path, opts):
-    opts += configopts('common')
-    opts += configopts('cat')
+    opts += Options(configopts('common'))
+    opts += Options(configopts('cat'))
     return create_filesystem(opts).cat(path, opts)
 
 
 def ls(path, opts):
-    opts += configopts('common')
-    opts += configopts('ls')
+    opts += Options(configopts('common'))
+    opts += Options(configopts('ls'))
     return create_filesystem(opts).ls(path, opts)
 
 
 def exists(path, opts):
-    opts += configopts('common')
-    opts += configopts('exists')
+    opts += Options(configopts('common'))
+    opts += Options(configopts('exists'))
     return create_filesystem(opts).exists(path, opts)
 
 
 def rm(path, opts):
-    opts += configopts('common')
-    opts += configopts('rm')
+    opts += Options(configopts('common'))
+    opts += Options(configopts('rm'))
     return create_filesystem(opts).rm(path, opts)
 
 
 def put(path1, path2, opts):
-    opts += configopts('common')
-    opts += configopts('put')
+    opts += Options(configopts('common'))
+    opts += Options(configopts('put'))
     return create_filesystem(opts).put(path1, path2, opts)
 
 
 def get(path1, path2, opts):
-    opts += configopts('common')
-    opts += configopts('get')
+    opts += Options(configopts('common'))
+    opts += Options(configopts('get'))
     return create_filesystem(opts).get(path1, path2, opts)
 
 
-def encodepipe(opts=[]):
-    addedopts = getopts(opts, ['addpath', 'file', 'alreadycoded'])
-    if addedopts['file']:
-        files = (open(f) for f in addedopts['file'])
-    else:
-        files = [sys.stdin]
-    for file in files:
-        outputs = (line[:-1] for line in file)
-        if addedopts['alreadycoded']:
-            outputs = loadcode(outputs)
-        else:
-            outputs = loadtext(outputs)
-        if addedopts['addpath']:
-            outputs = (((file.name, key), value) for (key, value) in outputs)
+def encodepipe(opts=None):
+    opts = opts or Options()
+    keys = ['addpath', 'file', 'alreadycoded']
+    addedopts = opts.filter(keys)
+    opts.remove(*keys)
+
+    ofiles = addedopts['file']
+    files = map(open, ofiles) if ofiles else [sys.stdin]
+
+    loadfun = loadcode if addedopts['alreadycoded'] else loadtext
+    addpath = addedopts['addpath']
+
+    for _file in files:
+        outputs = loadfun(line[:-1] for line in _file)
+        if addpath:
+            outputs = (((_file.name, key), value) for (key, value) in outputs)
         for output in dumpcode(outputs):
             print '\t'.join(output)
-        file.close()
+        _file.close()
     return 0
 
 
-def decodepipe(opts=[]):
-    addedopts = getopts(opts, ['file'])
-    if addedopts['file']:
-        files = (open(f) for f in addedopts['file'])
-    else:
-        files = [sys.stdin]
-    for file in files:
-        outputs = loadcode(line[:-1] for line in file)
+def decodepipe(opts=None):
+    opts = opts or Options()
+    ofiles = opts['file']
+    opts.remove('file')
+    files = map(open, ofiles) if ofiles else [sys.stdin]
+
+    for _file in files:
+        outputs = loadcode(line[:-1] for line in _file)
         for output in dumptext(outputs):
             print '\t'.join(output)
-        file.close()
+        _file.close()
         return 0
 
 

@@ -21,36 +21,36 @@ from itertools import chain, imap, izip
 from math import sqrt
 from copy import copy
 
-from dumbo.util import loadclassname
+from dumbo.util import loadclassname, Options
 
 
-def identitymapper(key, value):    
+def identitymapper(key, value):
     yield (key, value)
 
 
 def identityreducer(key, values):
-    for value in values:    
-        yield (key, value)    
+    for value in values:
+        yield (key, value)
 
 
 def sumreducer(key, values):
-    yield (key, sum(values))         
+    yield (key, sum(values))
 
 
 def sumsreducer(key, values):
-    yield (key, tuple(imap(sum, izip(*values))))       
+    yield (key, tuple(imap(sum, izip(*values))))
 
 
-def nlargestreducer(n, key=None):                      
+def nlargestreducer(n, key=None):
     def reducer(key_, values):
         yield (key_, heapq.nlargest(n, chain(*values), key=key))
-    return reducer                 
+    return reducer
 
 
 def nlargestcombiner(n, key=None):
     def combiner(key_, values):
-        yield (key_, heapq.nlargest(n, values, key=key))      
-    return combiner    
+        yield (key_, heapq.nlargest(n, values, key=key))
+    return combiner
 
 
 def nsmallestreducer(n, key=None):
@@ -59,7 +59,7 @@ def nsmallestreducer(n, key=None):
     return reducer
 
 def nsmallestcombiner(n, key=None):
-    def combiner(key_, values):                         
+    def combiner(key_, values):
         yield (key_, heapq.nsmallest(n, values, key=key))
     return combiner
 
@@ -96,10 +96,10 @@ class MultiMapper(object):
         else:
             cls.__call__ = cls.__call__normalkey
         return object.__new__(cls) 
-    
+
     def __init__(self):
         self.mappers = []
-        self.opts = [("addpath", "iter")]
+        self.opts = Options([("addpath", "iter")])
 
     def configure(self):
         mrbase_class = loadclassname(os.environ['dumbo_mrbase_class'])
@@ -152,7 +152,7 @@ class JoinMapper(object):
     def __init__(self, mapper, isprimary=False):
         self.mapper = mapper
         self.isprimary = isprimary
-        self.opts = [('joinkeys', 'yes')]
+        self.opts = Options([('joinkeys', 'yes')])
         if hasattr(mapper, 'opts'):
             self.opts += self.mapper.opts
         self.closefunc = None
@@ -197,7 +197,7 @@ class SecondaryMapper(JoinMapper):
 
 class JoinCombiner(object):
 
-    opts = [("joinkeys", "yes")]
+    opts = Options([("joinkeys", "yes")])
 
     def __call__(self, key, values):
         if key.isprimary:
@@ -213,7 +213,7 @@ class JoinCombiner(object):
                 jk = copy(key)
                 jk.body = k
                 yield jk, v
-    
+
     def secondary_blocked(self, key_body):
         '''Determines if the secondary method should be blocked or not.'''
         return False

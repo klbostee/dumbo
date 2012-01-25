@@ -1,20 +1,20 @@
 """A reducer base class to output one or multiple files in its raw fileformat"""
 from itertools import groupby
-
+from dumbo.util import Options
 
 class RawReducer(object):
     """Reducer to generate outputs in raw file format"""
 
     multipleoutput = False
-    singleopts = [
-            ('outputformat', 'raw'),
-            ]
-    multipleopts = [
-            ('getpath', 'yes'),
-            ('outputformat', 'raw'),
-            ('partitioner', 'fm.last.feathers.partition.Prefix'),
-            ('jobconf', 'feathers.output.filename.strippart=true'),
-            ]
+    singleopts = Options([
+        ('outputformat', 'raw'),
+    ])
+    multipleopts = Options([
+        ('getpath', 'yes'),
+        ('outputformat', 'raw'),
+        ('partitioner', 'fm.last.feathers.partition.Prefix'),
+        ('jobconf', 'feathers.output.filename.strippart=true'),
+    ])
 
     def __init__(self, factory=None, multipleoutput=None):
         if factory:
