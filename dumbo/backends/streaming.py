@@ -134,9 +134,9 @@ class StreamingIteration(Iteration):
         }
         inputformat_shortcuts.update(configopts('inputformats', self.prog))
 
-        inputformat = addedopts['inputformat'][0].lower()
-        if inputformat in inputformat_shortcuts:
-            inputformat = inputformat_shortcuts[inputformat]
+        inputformat = addedopts['inputformat'][0]
+        if inputformat.lower() in inputformat_shortcuts:
+            inputformat = inputformat_shortcuts[inputformat.lower()]
         opts.add('inputformat', inputformat)
 
         if not addedopts['outputformat']:
@@ -158,9 +158,9 @@ class StreamingIteration(Iteration):
             }
         outputformat_shortcuts.update(configopts('outputformats', self.prog))
 
-        outputformat = addedopts['outputformat'][0].lower()
-        if outputformat in outputformat_shortcuts:
-            outputformat = outputformat_shortcuts[outputformat]
+        outputformat = addedopts['outputformat'][0]
+        if outputformat.lower() in outputformat_shortcuts:
+            outputformat = outputformat_shortcuts[outputformat.lower()]
         opts.add('outputformat', outputformat)
 
         if addedopts['addpath'] and 'no' not in addedopts['addpath']:
