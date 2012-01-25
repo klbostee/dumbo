@@ -150,8 +150,7 @@ def encodepipe(opts=None):
 
 def decodepipe(opts=None):
     opts = opts or Options()
-    ofiles = opts['file']
-    opts.remove('file')
+    ofiles = opts.pop('file')
     files = map(open, ofiles) if ofiles else [sys.stdin]
 
     for _file in files:

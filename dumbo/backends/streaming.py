@@ -142,7 +142,7 @@ class StreamingIteration(Iteration):
         if not addedopts['outputformat']:
             addedopts.add('outputformat', 'sequencefile')
 
-        if 'no' not in addedopts['getpath']:
+        if addedopts['getpath'] and 'no' not in addedopts['getpath']:
             outputformat_shortcuts = {
                 'code': 'fm.last.feathers.output.MultipleSequenceFiles',
                 'text': 'fm.last.feathers.output.MultipleTextFiles',
@@ -163,7 +163,7 @@ class StreamingIteration(Iteration):
             outputformat = outputformat_shortcuts[outputformat]
         opts.add('outputformat', outputformat)
 
-        if 'no' not in addedopts['addpath']:
+        if addedopts['addpath'] and 'no' not in addedopts['addpath']:
             opts.add('cmdenv', 'dumbo_addpath=true')
 
         pyenv = envdef('PYTHONPATH', addedopts['libegg'], 'file', self.opts,

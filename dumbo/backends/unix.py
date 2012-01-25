@@ -77,7 +77,7 @@ class UnixIteration(Iteration):
 
         if 'code' in addedopts['inputformat']:
             encodepipe += ' -alreadycoded yes'
-        if 'no' not in addedopts['addpath']:
+        if addedopts['addpath'] and 'no' not in addedopts['addpath']:
             encodepipe += ' -addpath yes'
         if addedopts['numreducetasks'] and addedopts['numreducetasks'][0] == '0':
             retval = execute("%s | %s %s %s %s > '%s'" % (encodepipe,
