@@ -29,7 +29,7 @@ class StreamingBackend(Backend):
         return bool(opts['hadoop'])
         
     def create_iteration(self, opts):
-        return StreamingIteration(opts['prog'][0], opts)
+        return StreamingIteration(opts.pop('prog')[0], opts)
 
     def create_filesystem(self, opts):
         return StreamingFileSystem(findhadoop(opts['hadoop'][0]))
