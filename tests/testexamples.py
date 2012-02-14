@@ -27,7 +27,7 @@ class TestExamples(unittest.TestCase):
 
     def testwordcount(self):
         opts = self.common_opts
-        opts += Options([('input', self.exdir+'brian.txt'), ('output', self.outfile)])
+        opts += [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'wordcount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -36,8 +36,8 @@ class TestExamples(unittest.TestCase):
 
     def testoowordcount(self):
         opts = self.common_opts
-        opts += Options([('excludes', self.exdir+'excludes.txt'), 
-                 ('input', self.exdir+'brian.txt'), ('output', self.outfile)])
+        opts += [('excludes', self.exdir+'excludes.txt'),
+                 ('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'oowordcount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEquals(0, retval)
@@ -46,7 +46,7 @@ class TestExamples(unittest.TestCase):
 
     def testaltwordcount(self):
         opts = self.common_opts
-        opts += Options([('input', self.exdir+'brian.txt'), ('output', self.outfile)])
+        opts += [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'altwordcount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -55,7 +55,7 @@ class TestExamples(unittest.TestCase):
 
     def testitertwice(self):
         opts = self.common_opts
-        opts += Options([('input', self.exdir+'brian.txt'), ('output', self.outfile)])
+        opts += [('input', self.exdir+'brian.txt'), ('output', self.outfile)]
         retval = cmd.start(self.exdir+'itertwice.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -64,9 +64,9 @@ class TestExamples(unittest.TestCase):
 
     def testjoin(self):
         opts = self.common_opts
-        opts += Options([('input', self.exdir+'hostnames.txt'),
+        opts += [('input', self.exdir+'hostnames.txt'),
                  ('input', self.exdir+'logs.txt'),
-                 ('output', self.outfile)])
+                 ('output', self.outfile)]
         retval = cmd.start(self.exdir+'join.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)
@@ -75,9 +75,9 @@ class TestExamples(unittest.TestCase):
 
     def testmulticount(self):
         opts = self.common_opts
-        opts += Options([('input', self.exdir+'brian.txt'),
+        opts += [('input', self.exdir+'brian.txt'),
                  ('input', self.exdir+'eno.txt'),
-                 ('output', self.outfile)])
+                 ('output', self.outfile)]
         retval = cmd.start(self.exdir+'multicount.py', opts,
                            stdout=self.logfile, stderr=self.logfile)
         self.assertEqual(0, retval)

@@ -81,8 +81,8 @@ def loadtext(inputs):
 
 class Options(object):
     """
-    Class that represent a a set of options. A key can hold
-    more than a value and key are stored in lowercase.
+    Class that represents a set of options. A key can hold
+    more than one value and keys are stored in lowercase.
     """
 
     def __init__(self, seq=None, **kwargs):
@@ -93,7 +93,9 @@ class Options(object):
          - seq: a list of (key, value) pairs 
         """
         self._opts = defaultdict(set)
-        options = (seq or []) + kwargs.items()
+        options = seq or []
+        for k, v in kwargs.iteritems():
+            self.add(k, v)
         for k, v in options:
             self.add(k, v)
 

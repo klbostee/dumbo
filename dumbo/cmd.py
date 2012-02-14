@@ -68,12 +68,15 @@ def start(prog,
           opts,
           stdout=sys.stdout,
           stderr=sys.stderr):
+
+    opts = Options(opts)
     opts += Options(configopts('common'))
     opts += Options(configopts('start'))
 
     pyenv = envdef('PYTHONPATH', opts['libegg'],
                    shortcuts=dict(configopts('eggs', prog)),
                    extrapaths=sys.path)
+
     if not opts['prog']:
         opts.add('prog', prog)
 
@@ -82,6 +85,7 @@ def start(prog,
             print >> sys.stderr, 'ERROR:', prog, 'does not exist'
             return 1
         prog = '-m ' + prog
+
     return execute("%s %s" % (sys.executable, prog),
                    opts,
                    pyenv,
@@ -91,36 +95,42 @@ def start(prog,
 
 
 def cat(path, opts):
+    opts = Options(opts)
     opts += Options(configopts('common'))
     opts += Options(configopts('cat'))
     return create_filesystem(opts).cat(path, opts)
 
 
 def ls(path, opts):
+    opts = Options(opts)
     opts += Options(configopts('common'))
     opts += Options(configopts('ls'))
     return create_filesystem(opts).ls(path, opts)
 
 
 def exists(path, opts):
+    opts = Options(opts)
     opts += Options(configopts('common'))
     opts += Options(configopts('exists'))
     return create_filesystem(opts).exists(path, opts)
 
 
 def rm(path, opts):
+    opts = Options(opts)
     opts += Options(configopts('common'))
     opts += Options(configopts('rm'))
     return create_filesystem(opts).rm(path, opts)
 
 
 def put(path1, path2, opts):
+    opts = Options(opts)
     opts += Options(configopts('common'))
     opts += Options(configopts('put'))
     return create_filesystem(opts).put(path1, path2, opts)
 
 
 def get(path1, path2, opts):
+    opts = Options(opts)
     opts += Options(configopts('common'))
     opts += Options(configopts('get'))
     return create_filesystem(opts).get(path1, path2, opts)

@@ -361,7 +361,7 @@ def run(mapper,
                 for output in dumpcode(inputs):
                     print '\t'.join(output)
     else:
-        opts = opts or Options()
+        opts = Options(opts)
         if type(mapper) == str:
             opts.add('mapper', mapper)
         elif hasattr(mapper, 'opts'):
