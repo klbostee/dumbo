@@ -111,7 +111,9 @@ class UnixIteration(Iteration):
 class UnixFileSystem(FileSystem):
 
     def cat(self, path, opts):
-        return decodepipe(opts + [('file', path)])
+        opts = Options(opts)
+        opts.add('file', path)
+        return decodepipe(opts)
 
     def ls(self, path, opts):
         return execute("ls -l '%s'" % path, printcmd=False)
