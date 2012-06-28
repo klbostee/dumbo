@@ -53,12 +53,17 @@ class Job(object):
         return iter
 
     def run(self):
-        for _iter, (args, kwargs) in enumerate(self.iters):
-            kwargs['iter'] = _iter
-                
-            if len(sys.argv) > 1 and not sys.argv[1][0] == '-':
+        if len(sys.argv) > 1 and not sys.argv[1][0] == '-':
+            iterarg = 0  # default value
+            if len(sys.argv) > 2:
+                iterarg = int(sys.argv[2])
+            # for loop isn't necessary but helps for error reporting apparently
+            for args, kwargs in self.iters[iterarg:iterarg+1]:
+                kwargs['iter'] = iterarg
                 run(*args, **kwargs)
-            else:
+        else:
+            for _iter, (args, kwargs) in enumerate(self.iters):
+                kwargs['iter'] = _iter
                 opts = Options(kwargs.get('opts', []))
                 opts += parseargs(sys.argv[1:])
                 
