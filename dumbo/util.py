@@ -83,6 +83,7 @@ class Options(object):
     """
     Class that represents a set of options. A key can hold
     more than one value and keys are stored in lowercase.
+    The order of the values is preserved per key.
     """
 
     def __init__(self, seq=None, **kwargs):
@@ -92,7 +93,7 @@ class Options(object):
         Args:
          - seq: a list of (key, value) pairs 
         """
-        self._opts = defaultdict(set)
+        self._opts = defaultdict(list)  # not sets since order is important
         options = seq or []
         for k, v in kwargs.iteritems():
             self.add(k, v)
@@ -100,7 +101,16 @@ class Options(object):
             self.add(k, v)
 
     def add(self, key, value):
-        self._opts[key].add(value)
+        optlist = self._opts[key]
+        try:
+            optlist.remove(value)
+        except ValueError:
+            pass  # ignore "not in list" error
+        optlist.append(value)
+
+    def update(self, key, values):
+        for value in values:
+            self.add(key, value)
 
     def get(self, key):
         if key not in self._opts:
@@ -116,7 +126,7 @@ class Options(object):
     def __iadd__(self, opts):
         if isinstance(opts, Options):
             for k, vs in opts._opts.items():
-                self._opts[k].update(vs)
+                self.update(k, vs)
             return self
         elif isinstance(opts, (list, tuple, set)):
             for k, v in opts:
@@ -142,10 +152,10 @@ class Options(object):
 
     def allopts(self):
         """Return a list with all the options in the form of (key, value)"""
-        return [(k, v) for k, vs in self._opts.items() for v in sorted(vs)]
+        return [(k, v) for k, vs in self._opts.items() for v in vs]
 
     def to_dict(self):
-        return dict((k, list(sorted(vs))) for k, vs in self._opts.items())
+        return dict((k, list(vs)) for k, vs in self._opts.items())
 
     def __str__(self):
         ps = self.allopts()
