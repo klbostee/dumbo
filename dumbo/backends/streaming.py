@@ -62,7 +62,8 @@ class StreamingIteration(Iteration):
         addedopts = opts.filter(keys)
         opts.remove(*keys)
 
-        hadooplib = findhadoop(addedopts['hadooplib'][0])
+        hadoop = findhadoop(addedopts['hadoop'][0])
+        hadooplib = findhadoop(addedopts['hadooplib'][0]) if 'hadooplib' in addedopts else hadoop
         streamingjar = findjar(hadooplib, 'streaming')
         if not streamingjar:
             print >> sys.stderr, 'ERROR: Streaming jar not found'
@@ -194,7 +195,6 @@ class StreamingIteration(Iteration):
         if tmpjars:
             opts.add('jobconf', 'tmpjars=%s' % ','.join(tmpjars))
 
-        hadoop = findhadoop(addedopts['hadoop'][0])
         cmd = hadoop + '/bin/hadoop jar ' + streamingjar
         retval = execute(cmd, opts, hadenv)
 
