@@ -284,7 +284,8 @@ def findjar(hadoop, name):
         os.path.join(hadoop, 'mapred', 'contrib', name),
         os.path.join(hadoop, 'contrib', name),
         os.path.join(hadoop, 'mapred', 'contrib'),
-        os.path.join(hadoop, 'contrib')
+        os.path.join(hadoop, 'contrib'),
+        hadoop
     ])
     regex = re.compile(r'hadoop.*%s.*\.jar' % name)
 

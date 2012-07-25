@@ -58,15 +58,16 @@ class StreamingIteration(Iteration):
             'inputformat', 'outputformat', 'nummaptasks', 'numreducetasks',
             'priority', 'queue', 'cachefile', 'cachearchive', 'file',
             'codewritable', 'addpath', 'getpath', 'python', 'streamoutput',
-            'pypath']
+            'pypath', 'hadooplib']
         addedopts = opts.filter(keys)
         opts.remove(*keys)
 
-        hadoop = findhadoop(addedopts['hadoop'][0])
-        streamingjar = findjar(hadoop, 'streaming')
+        hadooplib = findhadoop(addedopts['hadooplib'][0])
+        streamingjar = findjar(hadooplib, 'streaming')
         if not streamingjar:
             print >> sys.stderr, 'ERROR: Streaming jar not found'
             return 1
+
         try:
             import typedbytes
         except ImportError:
@@ -193,25 +194,21 @@ class StreamingIteration(Iteration):
         if tmpjars:
             opts.add('jobconf', 'tmpjars=%s' % ','.join(tmpjars))
 
+        hadoop = findhadoop(addedopts['hadoop'][0])
         cmd = hadoop + '/bin/hadoop jar ' + streamingjar
         retval = execute(cmd, opts, hadenv)
 
         if 'yes' in addedopts['delinputs']:
             inputs = opts['input']
-            hdfs = _hdfspath(hadoop)
             for path in inputs:
-                execute("%s dfs -rmr '%s'" % (hdfs, path))
+                execute("%s/bin/hadoop fs -rmr '%s'" % (hadoop, path))
         return retval
-
-def _hdfspath(hadoop):
-    return hadoop + ("/bin/hdfs" if os.path.exists(hadoop + "/bin/hdfs")
-        else "/bin/hadoop")
 
 class StreamingFileSystem(FileSystem):
     
     def __init__(self, hadoop):
         self.hadoop = hadoop
-        self.hdfs = _hdfspath(hadoop)
+        self.hdfs = hadoop + '/bin/hadoop fs'
     
     def cat(self, path, opts):
         streamingjar = findjar(self.hadoop, 'streaming')
@@ -222,7 +219,7 @@ class StreamingFileSystem(FileSystem):
             shortcuts=dict(configopts('jars')))
         try:
             import typedbytes
-            ls = os.popen('%s %s dfs -ls %s' % (hadenv, self.hdfs, path))
+            ls = os.popen('%s %s -ls %s' % (hadenv, self.hdfs, path))
             if sum(c in path for c in ("*", "?", "{")) > 0:
                 # cat each file separately when the path contains special chars
                 lineparts = (line.split()[-1] for line in ls)
@@ -248,23 +245,23 @@ class StreamingFileSystem(FileSystem):
         return 0
     
     def ls(self, path, opts):
-        return execute("%s dfs -ls '%s'" % (self.hdfs, path),
+        return execute("%s -ls '%s'" % (self.hdfs, path),
                        printcmd=False)
     
     def exists(self, path, opts):
-        shellcmd = "%s dfs -stat '%s' >/dev/null 2>&1"
+        shellcmd = "%s -stat '%s' >/dev/null 2>&1"
         return 1 - int(execute(shellcmd % (self.hdfs, path), printcmd=False) == 0)
     
     def rm(self, path, opts):
-        return execute("%s dfs -rmr '%s'" % (self.hdfs, path),
+        return execute("%s -rmr '%s'" % (self.hdfs, path),
                        printcmd=False)
     
     def put(self, path1, path2, opts):
-        return execute("%s dfs -put '%s' '%s'" % (self.hdfs, path1,
+        return execute("%s -put '%s' '%s'" % (self.hdfs, path1,
                        path2), printcmd=False)
     
     def get(self, path1, path2, opts):
-        return execute("%s dfs -get '%s' '%s'" % (self.hdfs, path1,
+        return execute("%s -get '%s' '%s'" % (self.hdfs, path1,
                        path2), printcmd=False)
 
 
