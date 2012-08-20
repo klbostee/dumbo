@@ -220,16 +220,10 @@ class StreamingFileSystem(FileSystem):
         try:
             import typedbytes
             ls = os.popen('%s %s -ls %s' % (hadenv, self.hdfs, path))
-            if sum(c in path for c in ("*", "?", "{")) > 0:
-                # cat each file separately when the path contains special chars
-                lineparts = (line.split()[-1] for line in ls)
-                subpaths = [part for part in lineparts if part.startswith("/")]
-            else:
-                # we still do the ls even in this case to make sure we print errors 
-                subpaths = [path]
+            subpaths = [line.split()[-1] for line in ls if ":" in line]
             ls.close()
             for subpath in subpaths:
-                if subpath.endswith("/_logs"):
+                if subpath.split("/")[-1].startswith("_"):
                     continue
                 dumptb = os.popen('%s %s/bin/hadoop jar %s dumptb %s 2> /dev/null'
                                   % (hadenv, self.hadoop, streamingjar, subpath))
