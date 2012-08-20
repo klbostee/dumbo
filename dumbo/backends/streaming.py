@@ -63,8 +63,7 @@ class StreamingIteration(Iteration):
         opts.remove(*keys)
 
         hadoop = findhadoop(addedopts['hadoop'][0])
-        hadooplib = findhadoop(addedopts['hadooplib'][0]) if 'hadooplib' in addedopts else hadoop
-        streamingjar = findjar(hadooplib, 'streaming')
+        streamingjar = findjar(hadoop, 'streaming', addedopts['hadooplib'])
         if not streamingjar:
             print >> sys.stderr, 'ERROR: Streaming jar not found'
             return 1
@@ -211,7 +210,8 @@ class StreamingFileSystem(FileSystem):
         self.hdfs = hadoop + '/bin/hadoop fs'
     
     def cat(self, path, opts):
-        streamingjar = findjar(self.hadoop, 'streaming')
+        streamingjar = findjar(self.hadoop, 'streaming',
+                               opts['hadooplib'] if 'hadooplib' in opts else None)
         if not streamingjar:
             print >> sys.stderr, 'ERROR: Streaming jar not found'
             return 1

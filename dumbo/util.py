@@ -272,21 +272,30 @@ def findhadoop(optval):
     return hadoop
 
 
-def findjar(hadoop, name):
+def findjar(hadoop, name, libdirs=None):
     """Tries to find a JAR file based on given
     hadoop home directory and component base name (e.g 'streaming')"""
 
-    jardir_candidates = filter(os.path.exists, [
-        os.path.join(hadoop, 'mapred', 'build', 'contrib', name),
-        os.path.join(hadoop, 'build', 'contrib', name),
-        os.path.join(hadoop, 'mapred', 'contrib', name, 'lib'),
-        os.path.join(hadoop, 'contrib', name, 'lib'),
-        os.path.join(hadoop, 'mapred', 'contrib', name),
-        os.path.join(hadoop, 'contrib', name),
-        os.path.join(hadoop, 'mapred', 'contrib'),
-        os.path.join(hadoop, 'contrib'),
-        hadoop
-    ])
+    searchdirs = [hadoop]
+    if libdirs:
+        for libdir in libdirs:
+            if os.path.exists(libdir):
+                searchdirs.append(libdir)
+
+    jardir_candidates = []
+    for searchdir in searchdirs:
+        jardir_candidates += filter(os.path.exists, [
+            os.path.join(searchdir, 'mapred', 'build', 'contrib', name),
+            os.path.join(searchdir, 'build', 'contrib', name),
+            os.path.join(searchdir, 'mapred', 'contrib', name, 'lib'),
+            os.path.join(searchdir, 'contrib', name, 'lib'),
+            os.path.join(searchdir, 'mapred', 'contrib', name),
+            os.path.join(searchdir, 'contrib', name),
+            os.path.join(searchdir, 'mapred', 'contrib'),
+            os.path.join(searchdir, 'contrib'),
+            searchdir
+        ])
+
     regex = re.compile(r'hadoop.*%s.*\.jar' % name)
 
     for jardir in jardir_candidates:
