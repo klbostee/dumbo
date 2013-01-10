@@ -264,4 +264,4 @@ class StreamingRunInfo(RunInfo):
     def get_input_path(self):
         if os.environ.has_key('mapreduce_map_input_file'):
             return os.environ['mapreduce_map_input_file']
-        return os.environ['map_input_file']
+        return os.environ.get('map_input_file', 'unknown')
