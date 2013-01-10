@@ -219,9 +219,14 @@ class StreamingFileSystem(FileSystem):
             shortcuts=dict(configopts('jars')))
         try:
             import typedbytes
-            ls = os.popen('%s %s -ls %s' % (hadenv, self.hdfs, path))
-            subpaths = [line.split()[-1] for line in ls if ":" in line]
-            ls.close()
+
+            if "combined" in opts and opts["combined"][0] == "yes":
+                subpaths = [path]
+            else:
+                ls = os.popen('%s %s -ls %s' % (hadenv, self.hdfs, path))
+                subpaths = [line.split()[-1] for line in ls if ":" in line]
+                ls.close()
+
             for subpath in subpaths:
                 if subpath.split("/")[-1].startswith("_"):
                     continue
