@@ -28,12 +28,25 @@ http://www.cloudera.com/blog/2009/07/debugging-mapreduce-programs-with-mrunit/
 import sys
 import os
 import inspect
-from itertools import imap
+from itertools import imap, izip_longest, ifilter
 
 from dumbo.core import itermap, iterreduce, itermapred
 from dumbo.backends.common import MapRedBase
 
 __all__ = ['MapDriver', 'ReduceDriver', 'MapReduceDriver']
+
+def assert_iters_equal(expected, actual):
+    """:Raise AssertionError: If the elements of iterators `expected` and `actual`
+    are not equal (or one has more elements than the other)."""
+    sentinel = object()
+    expdiff, actdiff = next(ifilter(lambda x: cmp(*x), izip_longest(iter(expected), iter(actual), fillvalue=sentinel)), (None, None))
+    if expdiff == sentinel:
+        raise AssertionError("expected sequence exhausted before actual at element {0}".format(actdiff))
+    elif actdiff == sentinel:
+        raise AssertionError("actual sequence exhausted before expected at element {0}".format(expdiff))
+    elif expdiff != actdiff:
+        raise AssertionError("Element {0} did not match expected output: {1}".format(actdiff, expdiff))
+
 
 class BaseDriver(object):
     """A Generic test driver that passes
@@ -82,12 +95,7 @@ class BaseDriver(object):
         
     def run(self):
         """Run test"""
-        for output in imap(self._func, self._input_source):
-            exp_out = self._output_source.next()
-            assert output == exp_out, \
-                   "Output {0} did not match expected output: {1}".format(\
-                       output, exp_out)
-
+        assert_iters_equal(self._output_source, imap(self._func, self._input_source))
       
     def _instrument_class(self, cls):
         """Instrument a class for use with dumbo mapreduce tests"""
@@ -104,12 +112,7 @@ class MapDriver(BaseDriver):
     
     def run(self):
         """Run test"""
-        it = itermap(self._input_source, self._callable)
-        for output in it:
-            exp_out = self._output_source.next()
-            assert output == exp_out, \
-                   "Output {0} did not match expected output: {1}".format(\
-                       output, exp_out)    
+        assert_iters_equal(self._output_source, itermap(self._input_source, self._callable))
     
     
 class ReduceDriver(BaseDriver):
@@ -121,12 +124,7 @@ class ReduceDriver(BaseDriver):
     
     def run(self):
         """Run test"""
-        it = iterreduce(self._input_source, self._callable)
-        for output in it:
-            exp_out = self._output_source.next()
-            assert output == exp_out, \
-                   "Output {0} did not match expected output: {1}".format(\
-                       output, exp_out)     
+        assert_iters_equal(self._output_source, iterreduce(self._input_source, self._callable))
     
     
 class MapReduceDriver(BaseDriver):
@@ -157,11 +155,4 @@ class MapReduceDriver(BaseDriver):
     
     def run(self):
         """Run test"""
-        it = itermapred(self._input_source, self._mapper, self._reducer)
-        for output in it:
-            exp_out = self._output_source.next()
-            assert output == exp_out, \
-                   "Output {0} did not match expected output: {1}".format(\
-                       output, exp_out)     
-            
-    
+        assert_iters_equal(self._output_source, itermapred(self._input_source, self._mapper, self._reducer))
