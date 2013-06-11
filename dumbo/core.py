@@ -37,6 +37,7 @@ class Job(object):
         self.iters = []
         self.deps = {}  # will contain last dependency for each node
         self.root = -1  # id for the job's root input
+        self._argopts = parseargs(sys.argv[1:])
     
     def additer(self, *args, **kwargs):
         kwargs.setdefault('input', len(self.iters)-1)
@@ -52,6 +53,15 @@ class Job(object):
 
         return iter
 
+    def getparam(self, key, default=None):
+        if key in os.environ:
+            return os.environ.get(key, default)
+        elif "param" in self._argopts:
+            params = dict(s.split("=", 1) for s in self._argopts["param"])
+            return params.get(key, default)
+        else:
+            return default
+
     def run(self):
         if len(sys.argv) > 1 and not sys.argv[1][0] == '-':
             iterarg = 0  # default value
@@ -65,7 +75,7 @@ class Job(object):
             for _iter, (args, kwargs) in enumerate(self.iters):
                 kwargs['iter'] = _iter
                 opts = Options(kwargs.get('opts', []))
-                opts += parseargs(sys.argv[1:])
+                opts += self._argopts
                 
                 # this has to be done early, while all the opts are still there
                 backend = get_backend(opts)
@@ -155,6 +165,9 @@ class Program(object):
             return self.getopts(key)[0]
         except IndexError:
             return None
+
+    def addparam(self, key, value):
+        self.addopt("param", "%s=%s" % (key, value))
 
     def clone(self):
         return copy.deepcopy(self)

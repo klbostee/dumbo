@@ -80,6 +80,8 @@ class MapRedBase(object):
     
     params = Params()
     counters = Counters()
+
+    getparam = params.get
     
     def setstatus(self, msg):
         setstatus(msg)
