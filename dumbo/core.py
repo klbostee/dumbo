@@ -38,6 +38,7 @@ class Job(object):
         self.deps = {}  # will contain last dependency for each node
         self.root = -1  # id for the job's root input
         self._argopts = parseargs(sys.argv[1:])
+        self.initializer = None
     
     def additer(self, *args, **kwargs):
         kwargs.setdefault('input', len(self.iters)-1)
@@ -130,6 +131,9 @@ class Job(object):
                 opts += newopts
 
                 kwargs['opts'] = opts
+
+                if "initializer" not in kwargs and self.initializer is not None:
+                    kwargs["initializer"] = self.initializer
 
                 run(*args, **kwargs)
 
@@ -240,7 +244,8 @@ def run(mapper,
         opts=None,
         input=None,
         output=None,
-        iter=0):
+        iter=0,
+        initializer=None):
     if len(sys.argv) > 1 and not sys.argv[1][0] == '-':
         iterarg = 0  # default value
         if len(sys.argv) > 2:
@@ -433,6 +438,9 @@ def run(mapper,
         keys = [k for k, _ in opts if k in newopts]
         opts.remove(*keys)
         opts += newopts
+
+        if initializer is not None:
+            initializer(opts)
 
         backend = get_backend(opts)
 
