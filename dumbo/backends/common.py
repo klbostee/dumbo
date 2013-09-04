@@ -95,11 +95,11 @@ class JoinKey(object):
         self.isprimary = isprimary
   
     def __cmp__(self, other):
-        bodycmp = cmp(self.body, other.body)
-        if bodycmp:
-            return bodycmp
+        if isinstance(other, JoinKey):
+            # For isprimary, order is switched because we want True to sort before False
+            return cmp(self.body, other.body) or cmp(other.isprimary, self.isprimary)
         else:
-            return cmp(self.isprimary, other.isprimary)
+            return -1     # JoinKeys arbitrarily come before everything else
 
     @classmethod
     def fromjoinkey(cls, jk):
