@@ -77,7 +77,7 @@ class StreamingIteration(Iteration):
         if modpath.endswith('.egg'):
             addedopts.add('libegg', modpath)
         else:
-            opts.add('file', modpath)
+            opts.add('file', 'file://%s' % os.path.abspath(modpath))
         opts.add('jobconf', 'stream.map.input=typedbytes')
         opts.add('jobconf', 'stream.reduce.input=typedbytes')
 
