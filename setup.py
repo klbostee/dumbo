@@ -2,9 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name = 'dumbo',
-    version = '0.21.36',
+    version = '0.21.37',
     author = 'Klaas Bosteels',
-    author_email = 'klaas@last.fm',
     license = 'Apache Software License (ASF)',
     packages = find_packages(),
     entry_points = {
